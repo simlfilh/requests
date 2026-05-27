@@ -16,7 +16,7 @@ def init_excel():
             "ID", "Дата", "Время", "ФИО студента", "Комната",
             "Тип заявки", "Описание проблемы", "Статус"
         ])
-        df.to_excel(EXCEL_FILE, index=False)
+        df.to_csv(EXCEL_FILE, index=False)
 
 
 def save_request(data):
@@ -38,7 +38,7 @@ def save_request(data):
     }])
 
     df = pd.concat([df, new_row], ignore_index=True)
-    df.to_excel(EXCEL_FILE, index=False)
+    df.to_csv(EXCEL_FILE, index=False)
 
 
 def load_requests():
@@ -50,7 +50,7 @@ def update_status(request_id, new_status):
     """Обновляет статус заявки"""
     df = pd.read_excel(EXCEL_FILE)
     df.loc[df["ID"] == request_id, "Статус"] = new_status
-    df.to_excel(EXCEL_FILE, index=False)
+    df.to_csv(EXCEL_FILE, index=False)
 
 
 # --- ИНТЕРФЕЙС СТУДЕНТА ---
