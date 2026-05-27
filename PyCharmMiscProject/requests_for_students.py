@@ -4,7 +4,7 @@ from supabase import create_client
 import pandas as pd
 
 SUPABASE_URL = "https://ptdxlveqzmrrdlbtuxck.supabase.co"  # Вставь свой URL
-SUPABASE_KEY = "sb_secret_-rTuKDRU5nrlcVfX6ukZoQ_pwnG6nub"  # Вставь свой ключ
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB0ZHhsdmVxem1ycmRsYnR1eGNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4Nzc0NTQsImV4cCI6MjA5NTQ1MzQ1NH0.nquoPERBIhu0IMdTKKv3qTQQStjdECtAOM-hsFMIx0A"  # Вставь свой ключ
 
 def get_supabase():
     return create_client(SUPABASE_URL, SUPABASE_KEY)
