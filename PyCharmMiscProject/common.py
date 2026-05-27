@@ -1,8 +1,8 @@
 from supabase import create_client
 import pandas as pd
 
-SUPABASE_URL = "https://ТВОЙ_URL.supabase.co"  # Вставь свой URL
-SUPABASE_KEY = "ТВОЙ_ANON_KEY"  # Вставь свой ключ
+SUPABASE_URL = "https://ptdxlveqzmrrdlbtuxck.supabase.co"  # Вставь свой URL
+SUPABASE_KEY = "sb_publishable_JlbWpuP2kvzMdOpyDwIOzg_XCI3VWNv"  # Вставь свой ключ
 
 def get_supabase():
     return create_client(SUPABASE_URL, SUPABASE_KEY)
