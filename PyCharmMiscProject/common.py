@@ -1,52 +1,32 @@
-# common.py - общие функции для обоих приложений
-
+from supabase import create_client
 import pandas as pd
-import os
-from datetime import datetime
 
-EXCEL_FILE = "zayavki.xlsx"
-PASSWORD = "admin123"  # Смени на свой пароль
+SUPABASE_URL = "https://ТВОЙ_URL.supabase.co"  # Вставь свой URL
+SUPABASE_KEY = "ТВОЙ_ANON_KEY"  # Вставь свой ключ
 
-
-def init_excel():
-    """Создает Excel файл с нужными колонками, если его нет"""
-    if not os.path.exists(EXCEL_FILE):
-        df = pd.DataFrame(columns=[
-            "ID", "Дата", "Время", "ФИО студента", "Комната",
-            "Тип заявки", "Описание проблемы", "Статус"
-        ])
-        df.to_excel(EXCEL_FILE, index=False)
-
+def get_supabase():
+    return create_client(SUPABASE_URL, SUPABASE_KEY)
 
 def save_request(data):
-    """Сохраняет новую заявку в Excel"""
-    df = pd.read_excel(EXCEL_FILE)
-
-    # Генерируем ID
-    new_id = len(df) + 1
-
-    new_row = pd.DataFrame([{
-        "ID": new_id,
-        "Дата": data["date"],
-        "Время": data["time"],
-        "ФИО студента": data["fio"],
-        "Комната": data["room"],
-        "Тип заявки": data["type"],
-        "Описание проблемы": data["description"],
-        "Статус": "Новая"
-    }])
-
-    df = pd.concat([df, new_row], ignore_index=True)
-    df.to_excel(EXCEL_FILE, index=False)
-
+    supabase = get_supabase()
+    supabase.table('requests').insert({
+        "date": data["date"],
+        "time": data["time"],
+        "fio": data["fio"],
+        "room": data["room"],
+        "type": data["type"],
+        "description": data["description"],
+        "status": "Новая"
+    }).execute()
 
 def load_requests():
-    """Загружает все заявки из Excel"""
-    return pd.read_excel(EXCEL_FILE)
-
+    supabase = get_supabase()
+    response = supabase.table('requests').select('*').order('id', desc=False).execute()
+    if response.data:
+        return pd.DataFrame(response.data)
+    else:
+        return pd.DataFrame()
 
 def update_status(request_id, new_status):
-    """Обновляет статус заявки"""
-    df = pd.read_excel(EXCEL_FILE)
-    df.loc[df["ID"] == request_id, "Статус"] = new_status
-    df.to_excel(EXCEL_FILE, index=False)
+    supabase = get_supabase()
+    supabase.table('requests').update({'status': new_status}).eq('id', request_id).execute()
