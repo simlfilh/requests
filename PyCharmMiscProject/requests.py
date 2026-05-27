@@ -16,16 +16,24 @@ def init_excel():
             "ID", "Дата", "Время", "ФИО студента", "Комната",
             "Тип заявки", "Описание проблемы", "Статус"
         ])
-        df.to_csv(EXCEL_FILE, index=False)
+        df.to_excel(EXCEL_FILE, index=False, engine='openpyxl')
 
 
 def save_request(data):
     """Сохраняет новую заявку в Excel"""
-    df = pd.read_excel(EXCEL_FILE)
+    # Проверяем, существует ли файл
+    if os.path.exists(EXCEL_FILE):
+        df = pd.read_excel(EXCEL_FILE, engine='openpyxl')
+    else:
+        df = pd.DataFrame(columns=[
+            "ID", "Дата", "Время", "ФИО студента", "Комната",
+            "Тип заявки", "Описание проблемы", "Статус"
+        ])
 
     # Генерируем ID
     new_id = len(df) + 1
 
+    # Создаём новую строку
     new_row = pd.DataFrame([{
         "ID": new_id,
         "Дата": data["date"],
@@ -37,20 +45,29 @@ def save_request(data):
         "Статус": "Новая"
     }])
 
+    # Добавляем строку
     df = pd.concat([df, new_row], ignore_index=True)
-    df.to_csv(EXCEL_FILE, index=False)
+
+    # Сохраняем в Excel
+    df.to_excel(EXCEL_FILE, index=False, engine='openpyxl')
 
 
 def load_requests():
     """Загружает все заявки из Excel"""
-    return pd.read_excel(EXCEL_FILE)
+    if os.path.exists(EXCEL_FILE):
+        return pd.read_excel(EXCEL_FILE, engine='openpyxl')
+    else:
+        return pd.DataFrame(columns=[
+            "ID", "Дата", "Время", "ФИО студента", "Комната",
+            "Тип заявки", "Описание проблемы", "Статус"
+        ])
 
 
 def update_status(request_id, new_status):
     """Обновляет статус заявки"""
-    df = pd.read_excel(EXCEL_FILE)
+    df = pd.read_excel(EXCEL_FILE, engine='openpyxl')
     df.loc[df["ID"] == request_id, "Статус"] = new_status
-    df.to_csv(EXCEL_FILE, index=False)
+    df.to_excel(EXCEL_FILE, index=False, engine='openpyxl')
 
 
 # --- ИНТЕРФЕЙС СТУДЕНТА ---
@@ -161,15 +178,26 @@ def worker_interface():
         st.success(f"Статус заявки #{selected_id} изменён на '{new_status}'")
         st.rerun()
 
-    # Кнопка скачать Excel (только для работника)
+    # Кнопка скачать Excel (теперь в формате Excel)
     st.subheader("📥 Экспорт данных")
-    csv = df.to_csv(index=False).encode("utf-8-sig")
+
+    # Создаем временный Excel файл для скачивания
+    output = pd.DataFrame(df)  # Используем отфильтрованный df
+    output.to_excel("temp_zayavki.xlsx", index=False, engine='openpyxl')
+
+    with open("temp_zayavki.xlsx", "rb") as f:
+        excel_data = f.read()
+
     st.download_button(
-        label="Скачать все заявки в CSV",
-        data=csv,
-        file_name=f"zayavki_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
-        mime="text/csv"
+        label="📊 Скачать все заявки в Excel",
+        data=excel_data,
+        file_name=f"zayavki_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
+
+    # Удаляем временный файл
+    if os.path.exists("temp_zayavki.xlsx"):
+        os.remove("temp_zayavki.xlsx")
 
 
 # --- ГЛАВНАЯ ЛОГИКА ---
