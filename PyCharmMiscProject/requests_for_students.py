@@ -65,7 +65,9 @@ def send_email(to_email, subject, body):
         return True
     except Exception as e:
         print(f"Ошибка: {e}")
-        return Falsedef send_confirmation_to_student(student_email, student_name, request_id, description, dormitory):
+        return False
+        
+def send_confirmation_to_student(student_email, student_name, request_id, description, dormitory):
     subject = f"✅ Заявка №{request_id} принята"
     body = f"""
 Здравствуйте, {student_name}!
