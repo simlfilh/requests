@@ -18,6 +18,14 @@ SMTP_PASSWORD = "zwny cinl ejom qgsk"
 
 PASSWORD = "admin123"  
 
+# Список общежитий
+DORMITORIES = [
+    "Общежитие №1 | ул. Пражская, д. 25",
+    "Общежитие №2 | ул. Турку, д. 17",
+    "Общежитие №3 | пр-т Косыгина, д. 19, к. 2",
+    "Общежитие №4 | пр-т Просвещения, д. 85",
+    "Общежитие №5 | ул. Руставели, д. 37"
+]
 
 def get_supabase():
     return create_client(SUPABASE_URL, SUPABASE_KEY)
@@ -25,6 +33,14 @@ def get_supabase():
 def load_requests():
     supabase = get_supabase()
     response = supabase.table('requests').select('*').order('id', desc=False).execute()
+    if response.data:
+        return pd.DataFrame(response.data)
+    else:
+        return pd.DataFrame()
+
+def load_requests_by_dormitory(dormitory):
+    supabase = get_supabase()
+    response = supabase.table('requests').select('*').eq('dormitory', dormitory).order('id', desc=False).execute()
     if response.data:
         return pd.DataFrame(response.data)
     else:
@@ -99,6 +115,8 @@ def main():
 
     if "authenticated" not in st.session_state:
         st.session_state.authenticated = False
+    if "selected_dormitory" not in st.session_state:
+        st.session_state.selected_dormitory = "Все"
 
     if not st.session_state.authenticated:
         with st.form("login_form"):
@@ -115,8 +133,8 @@ def main():
 
     st.success("✅ Вы вошли как работник ЖБУ")
 
-    # ===== АВТООБНОВЛЕНИЕ (РАБОТАЮЩАЯ ВЕРСИЯ) =====
-    col1, col2, col3 = st.columns([2, 2, 1])
+    # ===== АВТООБНОВЛЕНИЕ =====
+    col1, col2, col3, col4 = st.columns([2, 2, 2, 1])
     
     with col1:
         auto_refresh = st.checkbox("🔄 Автообновление (каждые 10 секунд)", value=False)
@@ -126,23 +144,36 @@ def main():
             st.rerun()
     
     with col3:
-        # Счетчик до следующего обновления
-        if auto_refresh:
-            placeholder = st.empty()
-            for i in range(10, 0, -1):
-                placeholder.caption(f"Следующее обновление через {i} сек...")
-                time.sleep(1)
-            placeholder.caption("🔄 Обновление...")
+        # Выбор общежития для просмотра
+        dormitory_options = ["Все"] + DORMITORIES
+        selected_dorm = st.selectbox("🏠 Фильтр по общежитию", dormitory_options)
+        st.session_state.selected_dormitory = selected_dorm
+    
+    with col4:
+        if st.button("🚪 Выйти"):
+            st.session_state.authenticated = False
             st.rerun()
     
-    if st.button("🚪 Выйти"):
-        st.session_state.authenticated = False
+    # Автообновление
+    if auto_refresh:
+        placeholder = st.empty()
+        for i in range(10, 0, -1):
+            placeholder.caption(f"Следующее обновление через {i} сек...")
+            time.sleep(1)
+        placeholder.caption("🔄 Обновление...")
         st.rerun()
-    # ===== КОНЕЦ АВТООБНОВЛЕНИЯ =====
-
+    
     st.header("📋 Все заявки студентов")
-
-    df = load_requests()
+    
+    # Загружаем данные в зависимости от выбранного общежития
+    if st.session_state.selected_dormitory == "Все":
+        df = load_requests()
+        title = "Общая таблица всех заявок"
+    else:
+        df = load_requests_by_dormitory(st.session_state.selected_dormitory)
+        title = f"Заявки: {st.session_state.selected_dormitory}"
+    
+    st.subheader(title)
 
     if df.empty:
         st.info("Пока нет ни одной заявки.")
@@ -160,6 +191,60 @@ def main():
                                     "description": "Описание",
                                     "status": "Статус"
                                    })
+
+    # ===== СКРЫТЫЕ ТАБЛИЦЫ ДЛЯ КАЖДОГО ОБЩЕЖИТИЯ (доступны по кнопкам) =====
+    with st.expander("📊 Отдельные таблицы по общежитиям (скрыто)", expanded=False):
+        st.markdown("### Статистика по общежитиям")
+        
+        # Статистика по каждому общежитию
+        stats_data = []
+        for dorm in DORMITORIES:
+            dorm_df = load_requests_by_dormitory(dorm)
+            if not dorm_df.empty:
+                stats_data.append({
+                    "Общежитие": dorm,
+                    "Всего": len(dorm_df),
+                    "Новых": len(dorm_df[dorm_df["status"] == "Новая"]),
+                    "В работе": len(dorm_df[dorm_df["status"] == "В работе"]),
+                    "Выполнено": len(dorm_df[dorm_df["status"] == "Выполнена"])
+                })
+            else:
+                stats_data.append({
+                    "Общежитие": dorm,
+                    "Всего": 0,
+                    "Новых": 0,
+                    "В работе": 0,
+                    "Выполнено": 0
+                })
+        
+        stats_df = pd.DataFrame(stats_data)
+        st.dataframe(stats_df, use_container_width=True)
+        
+        # Отдельные таблицы для каждого общежития
+        for dorm in DORMITORIES:
+            with st.expander(f"📋 {dorm}", expanded=False):
+                dorm_df = load_requests_by_dormitory(dorm)
+                if not dorm_df.empty:
+                    dorm_display = dorm_df.rename(columns={
+                        "id": "ID", "date": "Дата", "time": "Время",
+                        "fio": "ФИО студента", "email": "Email",
+                        "room": "Комната", "type": "Тип заявки",
+                        "description": "Описание", "status": "Статус"
+                    })
+                    st.dataframe(dorm_display, use_container_width=True)
+                    
+                    # Кнопка экспорта для каждого общежития
+                    excel_data = to_excel(dorm_display)
+                    st.download_button(
+                        label=f"📊 Скачать {dorm} в Excel",
+                        data=excel_data,
+                        file_name=f"zayavki_{dorm.replace(' | ', '_')}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        key=f"export_{dorm}"
+                    )
+                else:
+                    st.info(f"Нет заявок для {dorm}")
+    # ===== КОНЕЦ СКРЫТЫХ ТАБЛИЦ =====
 
     col1, col2, col3 = st.columns(3)
 
