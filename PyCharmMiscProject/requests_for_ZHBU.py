@@ -120,6 +120,28 @@ def main():
 
     st.header("📋 Все заявки студентов")
 
+    # ===== АВТООБНОВЛЕНИЕ (ДОБАВЛЕНА ТОЛЬКО ЭТА ЧАСТЬ) =====
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        auto_refresh = st.checkbox("🔄 Автообновление (каждые 10 секунд)", value=False)
+    with col2:
+        if st.button("🔄 Обновить сейчас"):
+            st.rerun()
+    
+    # Автообновление через JavaScript
+    if auto_refresh:
+        st.markdown(
+            """
+            <script>
+                setTimeout(function() {
+                    window.location.reload();
+                }, 10000);
+            </script>
+            """,
+            unsafe_allow_html=True
+        )
+    # ===== КОНЕЦ АВТООБНОВЛЕНИЯ =====
+
     df = load_requests()
 
     if df.empty:
