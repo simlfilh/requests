@@ -7,128 +7,22 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
+# ===== НАСТРОЙКИ =====
 SUPABASE_URL = "https://ptdxlveqzmrrdlbtuxck.supabase.co"
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB0ZHhsdmVxem1ycmRsYnR1eGNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4Nzc0NTQsImV4cCI6MjA5NTQ1MzQ1NH0.nquoPERBIhu0IMdTKKv3qTQQStjdECtAOM-hsFMIx0A"
 
-# Email для уведомлений работников (можно добавить несколько через запятую)
+# Email настройки (замени на свои)
+SMTP_EMAIL = "valeraforumsch@gmail.com"
+SMTP_PASSWORD = "zwny cinl ejom qgsk"  # Вставь сюда свой 16-значный пароль
+
+# Email работников (кто будет получать уведомления о новых заявках)
 WORKER_EMAILS = [
-    "rabotnik1@zhbu.kz",  # Замени на реальные email работников
-    "rabotnik2@zhbu.kz",
-    # "dispetcher@zhbu.kz"  # Можно добавить сколько угодно
+    "valeraforumsch@gmail.com",  # Временный email для теста, потом заменишь
 ]
 
-# Настройки SMTP (добавь в Streamlit Secrets)
-SMTP_SERVER = "smtp.gmail.com"
-SMTP_PORT = 587
-SMTP_EMAIL = st.secrets.get("SMTP_EMAIL", "your_email@gmail.com")
-SMTP_PASSWORD = st.secrets.get("SMTP_PASSWORD", "your_app_password")
-
+# ===== ФУНКЦИИ =====
 def get_supabase():
     return create_client(SUPABASE_URL, SUPABASE_KEY)
-
-def send_email(to_emails, subject, body):
-    """Отправляет email одному или нескольким получателям"""
-    try:
-        # Если передан список, объединяем в строку
-        if isinstance(to_emails, list):
-            to_emails = ", ".join(to_emails)
-        
-        msg = MIMEMultipart()
-        msg["From"] = SMTP_EMAIL
-        msg["To"] = to_emails
-        msg["Subject"] = subject
-        
-        msg.attach(MIMEText(body, "plain", "utf-8"))
-        
-        server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
-        server.starttls()
-        server.login(SMTP_EMAIL, SMTP_PASSWORD)
-        server.send_message(msg)
-        server.quit()
-        return True
-    except Exception as e:
-        print(f"Ошибка отправки email: {e}")
-        return False
-
-def send_request_confirmation(student_email, student_name, request_id, description):
-    """Отправляет подтверждение студенту о создании заявки"""
-    subject = f"✅ ЖБУ Общежитие - Заявка #{request_id} принята"
-    
-    body = f"""
-Здравствуйте, {student_name}!
-
-Ваша заявка #{request_id} успешно принята в работу.
-
-📋 Детали заявки:
-• Описание: {description[:200]}...
-• Статус: Новая
-
-⏱ Ожидайте ответа от работников ЖБУ.
-
-С уважением,
-Администрация ЖБУ Общежития
-"""
-    
-    return send_email(student_email, subject, body)
-
-def send_worker_notification(student_name, student_email, student_room, request_id, request_type, description):
-    """Отправляет уведомление работникам о новой заявке"""
-    subject = f"🔔 НОВАЯ ЗАЯВКА #{request_id} - ЖБУ Общежитие"
-    
-    # Определяем приоритет и ответственного
-    type_priority = {
-        "santeh": ("🔧 Сантехника", "Сантехник", "Высокий"),
-        "electric": ("⚡ Электрика", "Электрик", "Высокий"),
-        "cleaning": ("🧹 Уборка", "Уборщик", "Средний"),
-        "furniture": ("🪑 Мебель", "Столяр", "Средний"),
-        "other": ("❓ Вопрос", "Диспетчер", "Низкий")
-    }
-    
-    type_info = type_priority.get(request_type, ("Другое", "Диспетчер", "Средний"))
-    
-    body = f"""
-📢 Поступила новая заявка от студента!
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-📋 ИНФОРМАЦИЯ О ЗАЯВКЕ:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-• Номер заявки: #{request_id}
-• Тип: {type_info[0]}
-• Приоритет: {type_info[2]}
-• Ответственный: {type_info[1]}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-👤 ИНФОРМАЦИЯ О СТУДЕНТЕ:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-• ФИО: {student_name}
-• Комната: {student_room}
-• Email для связи: {student_email}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📝 ОПИСАНИЕ ПРОБЛЕМЫ:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-{description}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-⚡ Действия:
-1. Зайдите в панель управления ЖБУ
-2. Назначьте ответственного
-3. Измените статус заявки на "В работе"
-
-📱 Ссылка на панель управления: [ссылка на твой сайт для работников]
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-С уважением,
-Автоматическая система уведомлений ЖБУ
-"""
-    
-    return send_email(WORKER_EMAILS, subject, body)
 
 def save_request(data):
     supabase = get_supabase()
@@ -142,15 +36,93 @@ def save_request(data):
         "description": data["description"],
         "status": "Новая"
     }).execute()
-    
     if result.data:
         return result.data[0]['id']
     return None
+
+def send_email(to_email, subject, body):
+    """Отправляет email"""
+    try:
+        msg = MIMEMultipart()
+        msg["From"] = SMTP_EMAIL
+        msg["To"] = to_email
+        msg["Subject"] = subject
+        msg.attach(MIMEText(body, "plain", "utf-8"))
+        
+        server = smtplib.SMTP("smtp.gmail.com", 587)
+        server.starttls()
+        server.login(SMTP_EMAIL, SMTP_PASSWORD)
+        server.send_message(msg)
+        server.quit()
+        return True
+    except Exception as e:
+        print(f"Ошибка: {e}")
+        return False
+
+def send_confirmation_to_student(student_email, student_name, request_id, description):
+    """Отправляет подтверждение студенту"""
+    subject = f"✅ ЖБУ Общежитие - Заявка #{request_id} принята"
+    body = f"""
+Здравствуйте, {student_name}!
+
+Ваша заявка #{request_id} успешно принята в работу.
+
+📝 Описание: {description[:200]}...
+📌 Статус: Новая
+
+Ожидайте ответа от работников ЖБУ.
+
+С уважением,
+Администрация ЖБУ
+"""
+    return send_email(student_email, subject, body)
+
+def send_notification_to_workers(student_name, student_email, student_room, request_id, request_type, description):
+    """Отправляет уведомление работникам"""
+    type_names = {
+        "santeh": "🔧 Сантехника",
+        "electric": "⚡ Электрика",
+        "cleaning": "🧹 Уборка",
+        "furniture": "🪑 Мебель",
+        "other": "❓ Вопрос"
+    }
+    type_name = type_names.get(request_type, "Другое")
+    
+    subject = f"🔔 НОВАЯ ЗАЯВКА #{request_id} - ЖБУ"
+    body = f"""
+📢 Поступила новая заявка!
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📋 ЗАЯВКА #{request_id}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+• Тип: {type_name}
+• Приоритет: Средний
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+👤 СТУДЕНТ
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+• ФИО: {student_name}
+• Комната: {student_room}
+• Email: {student_email}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📝 ОПИСАНИЕ
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+{description}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Зайдите в панель управления ЖБУ для обработки заявки.
+"""
+    # Отправляем всем работникам
+    for worker_email in WORKER_EMAILS:
+        send_email(worker_email, subject, body)
+    return True
 
 def validate_email(email):
     pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
     return re.match(pattern, email) is not None
 
+# ===== ОСНОВНОЕ ПРИЛОЖЕНИЕ =====
 def main():
     st.title("🏠 ЖБУ Общежитие - Подать заявку")
     st.markdown("Заполните форму ниже, чтобы оставить заявку или вопрос для работников ЖБУ.")
@@ -158,8 +130,8 @@ def main():
     with st.form("student_form"):
         fio = st.text_input("Ваше ФИО *")
         email = st.text_input("Email для связи *", 
-                              placeholder="example@university.com",
-                              help="На этот email придет подтверждение заявки и уведомления об изменении статуса")
+                              placeholder="example@mail.ru",
+                              help="На этот email придет подтверждение заявки")
         room = st.text_input("Номер комнаты *")
 
         type_map = {
@@ -177,7 +149,7 @@ def main():
 
         if submitted:
             if not fio or not email or not room or not description:
-                st.error("Пожалуйста, заполните все обязательные поля (*)")
+                st.error("❌ Пожалуйста, заполните все обязательные поля (*)")
             elif not validate_email(email):
                 st.error("❌ Пожалуйста, введите корректный email адрес")
             else:
@@ -192,33 +164,21 @@ def main():
                     "description": description
                 }
                 try:
-                    # Сохраняем заявку и получаем ID
+                    # Сохраняем заявку
                     new_id = save_request(request_data)
                     
                     if new_id:
-                        # 1. Отправляем подтверждение студенту
-                        student_email_sent = send_request_confirmation(email, fio, new_id, description)
+                        # Отправляем подтверждение студенту
+                        send_confirmation_to_student(email, fio, new_id, description)
+                        # Отправляем уведомление работникам
+                        send_notification_to_workers(fio, email, room, new_id, type_map[type_display], description)
                         
-                        # 2. Отправляем уведомление работникам
-                        worker_email_sent = send_worker_notification(
-                            fio, email, room, new_id, 
-                            type_map[type_display], description
-                        )
-                        
-                        # Показываем результат
-                        if student_email_sent and worker_email_sent:
-                            st.success("✅ Заявка успешно отправлена! Подтверждение отправлено вам на почту. Работники ЖБУ уведомлены.")
-                        elif student_email_sent:
-                            st.warning("⚠️ Заявка отправлена, но не удалось уведомить работников. Они увидят её в панели управления.")
-                        else:
-                            st.warning("⚠️ Заявка отправлена, но не удалось отправить подтверждение на вашу почту.")
-                        
+                        st.success("✅ Заявка успешно отправлена! Подтверждение придет на вашу почту.")
                         st.balloons()
                     else:
-                        st.error("Ошибка при сохранении заявки")
-                        
+                        st.error("❌ Ошибка при сохранении заявки")
                 except Exception as e:
-                    st.error(f"Ошибка: {e}")
+                    st.error(f"❌ Ошибка: {e}")
 
 if __name__ == "__main__":
     main()
