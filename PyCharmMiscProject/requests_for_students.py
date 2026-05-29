@@ -6,6 +6,7 @@ import re
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from datetime import datetime, timedelta, timezone
 
 # ===== НАСТРОЙКИ =====
 SUPABASE_URL = "https://ptdxlveqzmrrdlbtuxck.supabase.co"
@@ -153,10 +154,12 @@ def main():
             elif not validate_email(email):
                 st.error("❌ Пожалуйста, введите корректный email адрес")
             else:
-                now = datetime.now()
+                utc_now = datetime.now(timezone.utc)
+                local_now = utc_now + timedelta(hours=3)  # Для UTC+3
+                
                 request_data = {
-                    "date": now.strftime("%Y-%m-%d"),
-                    "time": now.strftime("%H:%M:%S"),
+                    "date": local_now.strftime("%Y-%m-%d"),
+                    "time": local_now.strftime("%H:%M:%S"),
                     "fio": fio,
                     "email": email,
                     "room": room,
