@@ -6,6 +6,7 @@ from io import BytesIO
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+import time
 
 
 SUPABASE_URL = "https://ptdxlveqzmrrdlbtuxck.supabase.co"
@@ -114,33 +115,32 @@ def main():
 
     st.success("✅ Вы вошли как работник ЖБУ")
 
-    if st.button("🚪 Выйти"):
-        st.session_state.authenticated = False
-        st.rerun()
-
-    st.header("📋 Все заявки студентов")
-
-    # ===== АВТООБНОВЛЕНИЕ (ДОБАВЛЕНА ТОЛЬКО ЭТА ЧАСТЬ) =====
-    col1, col2 = st.columns([3, 1])
+    # ===== АВТООБНОВЛЕНИЕ (РАБОТАЮЩАЯ ВЕРСИЯ) =====
+    col1, col2, col3 = st.columns([2, 2, 1])
+    
     with col1:
         auto_refresh = st.checkbox("🔄 Автообновление (каждые 10 секунд)", value=False)
+    
     with col2:
         if st.button("🔄 Обновить сейчас"):
             st.rerun()
     
-    # Автообновление через JavaScript
-    if auto_refresh:
-        st.markdown(
-            """
-            <script>
-                setTimeout(function() {
-                    window.location.reload();
-                }, 10000);
-            </script>
-            """,
-            unsafe_allow_html=True
-        )
+    with col3:
+        # Счетчик до следующего обновления
+        if auto_refresh:
+            placeholder = st.empty()
+            for i in range(10, 0, -1):
+                placeholder.caption(f"Следующее обновление через {i} сек...")
+                time.sleep(1)
+            placeholder.caption("🔄 Обновление...")
+            st.rerun()
+    
+    if st.button("🚪 Выйти"):
+        st.session_state.authenticated = False
+        st.rerun()
     # ===== КОНЕЦ АВТООБНОВЛЕНИЯ =====
+
+    st.header("📋 Все заявки студентов")
 
     df = load_requests()
 
