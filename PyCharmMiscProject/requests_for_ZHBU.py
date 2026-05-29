@@ -7,17 +7,17 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
-# ===== НАСТРОЙКИ =====
+
 SUPABASE_URL = "https://ptdxlveqzmrrdlbtuxck.supabase.co"
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB0ZHhsdmVxem1ycmRsYnR1eGNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4Nzc0NTQsImV4cCI6MjA5NTQ1MzQ1NH0.nquoPERBIhu0IMdTKKv3qTQQStjdECtAOM-hsFMIx0A"
 
-# Email настройки (те же самые)
+
 SMTP_EMAIL = "valeraforumsch@gmail.com"
-SMTP_PASSWORD = "zwny cinl ejom qgsk"  # Вставь сюда свой 16-значный пароль
+SMTP_PASSWORD = "zwny cinl ejom qgsk"  
 
-PASSWORD = "admin123"  # Пароль для входа в панель
+PASSWORD = "admin123"  
 
-# ===== ФУНКЦИИ =====
+
 def get_supabase():
     return create_client(SUPABASE_URL, SUPABASE_KEY)
 
@@ -30,10 +30,8 @@ def load_requests():
         return pd.DataFrame()
 
 def update_status_with_notification(request_id, new_status):
-    """Обновляет статус и отправляет уведомление студенту"""
     supabase = get_supabase()
     
-    # Получаем данные заявки
     response = supabase.table('requests').select('*').eq('id', request_id).execute()
     if response.data:
         request = response.data[0]
@@ -41,10 +39,8 @@ def update_status_with_notification(request_id, new_status):
         student_name = request.get('fio')
         description = request.get('description')
         
-        # Обновляем статус
         supabase.table('requests').update({'status': new_status}).eq('id', request_id).execute()
         
-        # Отправляем уведомление студенту
         if student_email and student_email != 'не указан':
             send_status_notification(student_email, student_name, request_id, new_status, description)
         
@@ -52,7 +48,6 @@ def update_status_with_notification(request_id, new_status):
     return False
 
 def send_status_notification(student_email, student_name, request_id, new_status, description):
-    """Отправляет студенту уведомление об изменении статуса"""
     status_messages = {
         "Новая": "Ваша заявка принята и ожидает рассмотрения.",
         "В работе": "Специалисты ЖБУ приступили к выполнению вашей заявки.",
@@ -60,11 +55,11 @@ def send_status_notification(student_email, student_name, request_id, new_status
     }
     message = status_messages.get(new_status, f"Статус заявки изменен на '{new_status}'")
     
-    subject = f"📝 ЖБУ Общежитие - Обновление статуса заявки #{request_id}"
+    subject = f"📝 ЖБУ Общежитие - Обновление статуса заявки №{request_id}"
     body = f"""
 Здравствуйте, {student_name}!
 
-Статус вашей заявки #{request_id} изменился.
+Статус вашей заявки №{request_id} изменился.
 
 📋 Текущий статус: {new_status}
 📝 Описание: {description[:200]}...
@@ -72,7 +67,7 @@ def send_status_notification(student_email, student_name, request_id, new_status
 {message}
 
 С уважением,
-Администрация ЖБУ Общежития
+Администрация Жилищно-бытового управления СПбГЭУ
 """
     try:
         msg = MIMEMultipart()
@@ -92,17 +87,15 @@ def send_status_notification(student_email, student_name, request_id, new_status
         return False
 
 def to_excel(df):
-    """Преобразует DataFrame в Excel файл"""
     output = BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
         df.to_excel(writer, index=False, sheet_name='Заявки')
     return output.getvalue()
 
-# ===== ОСНОВНОЕ ПРИЛОЖЕНИЕ =====
+
 def main():
     st.title("🔐 Панель работника ЖБУ")
 
-    # Авторизация
     if "authenticated" not in st.session_state:
         st.session_state.authenticated = False
 
@@ -119,7 +112,6 @@ def main():
                     st.error("❌ Неверный пароль!")
         return
 
-    # Панель работника
     st.success("✅ Вы вошли как работник ЖБУ")
 
     if st.button("🚪 Выйти"):
@@ -128,28 +120,24 @@ def main():
 
     st.header("📋 Все заявки студентов")
 
-    # Загружаем данные
     df = load_requests()
 
     if df.empty:
         st.info("Пока нет ни одной заявки.")
         return
 
-    # Переименовываем колонки
     display_df = df.rename(columns={
-        "id": "ID",
-        "date": "Дата",
-        "time": "Время",
-        "fio": "ФИО студента",
-        "email": "Email",
-        "room": "Комната",
-        "type": "Тип заявки",
-        "description": "Описание",
-        "status": "Статус"
-    })
-
-    # ===== ФИЛЬТРЫ =====
-    st.subheader("🔍 Фильтры")
+                                    "id": "ID",
+                                    "date": "Дата",
+                                    "time": "Время",
+                                    "fio": "ФИО студента",
+                                    "email": "Email",
+                                    "dormitory": "Общежитие",  
+                                    "room": "Комната",
+                                    "type": "Тип заявки",
+                                    "description": "Описание",
+                                    "status": "Статус"
+                                   })
 
     col1, col2, col3 = st.columns(3)
 
@@ -157,14 +145,13 @@ def main():
         status_filter = st.selectbox("Статус", ["Все", "Новая", "В работе", "Выполнена"])
 
     with col2:
-        date_options = ["Все", "Сегодня", "Вчера", "Эта неделя", "Выбрать дату"]
+        date_options = ["Все", "Сегодня", "Вчера", "Выбрать дату"]
         date_filter_type = st.selectbox("Период", date_options)
 
     with col3:
-        type_options = ["Все", "Сантехника", "Электрика", "Уборка", "Мебель", "Другое"]
+        type_options = ["Все", "Сантехника", "Электрика", "Уборка", "Другое"]
         type_filter = st.selectbox("Тип заявки", type_options)
 
-    # Применяем фильтры
     filtered_df = display_df.copy()
 
     if status_filter != "Все":
@@ -172,11 +159,10 @@ def main():
 
     if type_filter != "Все":
         type_map_filter = {
-            "Сантехника": "santeh",
-            "Электрика": "electric",
-            "Уборка": "cleaning",
-            "Мебель": "furniture",
-            "Другое": "other"
+            "Сантехника": "Сантехника",
+            "Электрика": "Электрика",
+            "Уборка": "Уборка",
+            "Другое": "Другое"
         }
         filtered_df = filtered_df[filtered_df["Тип заявки"] == type_map_filter[type_filter]]
 
@@ -195,7 +181,7 @@ def main():
 
     st.info(f"📊 Найдено заявок: {len(filtered_df)} из {len(display_df)}")
 
-    # Статистика
+    
     col1, col2, col3, col4 = st.columns(4)
     with col1:
         st.metric("Всего в фильтре", len(filtered_df))
@@ -208,7 +194,7 @@ def main():
 
     st.dataframe(filtered_df, use_container_width=True)
 
-    # ===== ИЗМЕНЕНИЕ СТАТУСА =====
+    
     st.subheader("✏️ Изменить статус заявки")
 
     col1, col2 = st.columns(2)
@@ -230,7 +216,7 @@ def main():
         else:
             st.error("❌ Ошибка при обновлении статуса")
 
-    # ===== ЭКСПОРТ В EXCEL =====
+   
     st.subheader("📥 Экспорт данных")
 
     export_type = st.radio(
