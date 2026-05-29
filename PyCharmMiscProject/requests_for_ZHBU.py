@@ -1,5 +1,5 @@
 import streamlit as st
-from datetime import datetime
+from datetime import datetime, timedelta
 from supabase import create_client
 import pandas as pd
 from io import BytesIO
@@ -61,69 +61,133 @@ def main():
 
     st.header("📋 Все заявки студентов")
 
+    # Загружаем данные
     df = load_requests()
 
     if df.empty:
         st.info("Пока нет ни одной заявки.")
         return
 
-    # Статистика
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.metric("Всего заявок", len(df))
-    with col2:
-        st.metric("Новых", len(df[df["status"] == "Новая"]))
-    with col3:
-        st.metric("В работе", len(df[df["status"] == "В работе"]))
-
     # Переименовываем колонки для красивого отображения
     display_df = df.rename(columns={
         "id": "ID", 
         "date": "Дата", 
         "time": "Время",
-        "fio": "ФИО студента", 
+        "fio": "ФИО студента",
+        "email": "Email",
         "room": "Комната",
         "type": "Тип заявки", 
         "description": "Описание", 
         "status": "Статус"
     })
 
-    # Фильтр
-    status_filter = st.selectbox("Фильтр по статусу", ["Все", "Новая", "В работе", "Выполнена"])
+    # ===== ФИЛЬТРЫ =====
+    st.subheader("🔍 Фильтры")
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        # Фильтр по статусу
+        status_filter = st.selectbox("Статус", ["Все", "Новая", "В работе", "Выполнена"])
+    
+    with col2:
+        # Фильтр по дате
+        date_options = ["Все", "Сегодня", "Вчера", "Эта неделя", "Выбрать дату"]
+        date_filter_type = st.selectbox("Период", date_options)
+    
+    with col3:
+        # Дополнительный фильтр по типу заявки
+        type_options = ["Все", "Сантехника", "Электрика", "Уборка", "Мебель", "Другое"]
+        type_filter = st.selectbox("Тип заявки", type_options)
+    
+    # Применяем фильтры
+    filtered_df = display_df.copy()
+    
+    # Фильтр по статусу
     if status_filter != "Все":
-        filtered_df = display_df[display_df["Статус"] == status_filter]
-    else:
-        filtered_df = display_df
-
+        filtered_df = filtered_df[filtered_df["Статус"] == status_filter]
+    
+    # Фильтр по типу
+    if type_filter != "Все":
+        type_map_filter = {
+            "Сантехника": "santeh",
+            "Электрика": "electric", 
+            "Уборка": "cleaning",
+            "Мебель": "furniture",
+            "Другое": "other"
+        }
+        filtered_df = filtered_df[filtered_df["Тип заявки"] == type_map_filter[type_filter]]
+    
+    # Фильтр по дате
+    today = datetime.now().date()
+    
+    if date_filter_type == "Сегодня":
+        filtered_df = filtered_df[filtered_df["Дата"] == today.strftime("%Y-%m-%d")]
+    elif date_filter_type == "Вчера":
+        yesterday = today - timedelta(days=1)
+        filtered_df = filtered_df[filtered_df["Дата"] == yesterday.strftime("%Y-%m-%d")]
+    elif date_filter_type == "Эта неделя":
+        start_of_week = today - timedelta(days=today.weekday())
+        filtered_df = filtered_df[pd.to_datetime(filtered_df["Дата"]) >= pd.Timestamp(start_of_week)]
+    elif date_filter_type == "Выбрать дату":
+        selected_date = st.date_input("Выберите дату", value=today)
+        filtered_df = filtered_df[filtered_df["Дата"] == selected_date.strftime("%Y-%m-%d")]
+    
+    # Показываем информацию о фильтрации
+    st.info(f"📊 Найдено заявок: {len(filtered_df)} из {len(display_df)}")
+    
+    # Статистика по отфильтрованным данным
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.metric("Всего в фильтре", len(filtered_df))
+    with col2:
+        st.metric("Новых", len(filtered_df[filtered_df["Статус"] == "Новая"]))
+    with col3:
+        st.metric("В работе", len(filtered_df[filtered_df["Статус"] == "В работе"]))
+    with col4:
+        st.metric("Выполнено", len(filtered_df[filtered_df["Статус"] == "Выполнена"]))
+    
+    # Отображаем таблицу
     st.dataframe(filtered_df, use_container_width=True)
-
-    # Изменение статуса
+    
+    # ===== ИЗМЕНЕНИЕ СТАТУСА =====
     st.subheader("✏️ Изменить статус заявки")
     col1, col2 = st.columns(2)
-
+    
     with col1:
-        if not df.empty:
-            selected_id = st.selectbox("Выберите ID заявки", df["id"].tolist())
+        if not filtered_df.empty:
+            selected_id = st.selectbox("Выберите ID заявки", filtered_df["ID"].tolist())
         else:
             selected_id = None
-
+            st.warning("Нет заявок для изменения")
+    
     with col2:
         new_status = st.selectbox("Новый статус", ["Новая", "В работе", "Выполнена"])
-
+    
     if st.button("Обновить статус") and selected_id:
         update_status(selected_id, new_status)
         st.success(f"✅ Статус заявки #{selected_id} изменён на '{new_status}'")
         st.rerun()
-
-    # Экспорт в Excel
-    st.subheader("📥 Экспорт данных в Excel")
+    
+    # ===== ЭКСПОРТ В EXCEL =====
+    st.subheader("📥 Экспорт данных")
+    
+    export_col1, export_col2 = st.columns(2)
+    
+    with export_col1:
+        export_type = st.radio(
+            "Что экспортировать?",
+            ["Все заявки", "Только отфильтрованные"],
+            horizontal=True
+        )
+    
+    with export_col2:
+        if export_type == "Только отфильтрованные":
+            st.write(f"📄 Будет экспортировано: **{len(filtered_df)}** заявок")
+        else:
+            st.write(f"📄 Будет экспортировано: **{len(display_df)}** заявок")
     
     # Выбор формата экспорта
-    export_type = st.radio(
-        "Что экспортировать?",
-        ["Все заявки", "Только отфильтрованные"]
-    )
-    
     if export_type == "Только отфильтрованные":
         export_df = filtered_df
     else:
@@ -135,14 +199,15 @@ def main():
         label="📊 Скачать в Excel формате",
         data=excel_data,
         file_name=f"zayavki_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        use_container_width=True
     )
     
-    # Дополнительно: кнопка для CSV (на всякий случай)
-    with st.expander("Дополнительные форматы"):
-        csv = display_df.to_csv(index=False).encode("utf-8-sig")
+    # Дополнительно: CSV
+    with st.expander("📄 Дополнительные форматы"):
+        csv = export_df.to_csv(index=False).encode("utf-8-sig")
         st.download_button(
-            label="📄 Скачать в CSV формате",
+            label="Скачать в CSV формате",
             data=csv,
             file_name=f"zayavki_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
             mime="text/csv"
