@@ -3,10 +3,21 @@ from datetime import datetime, timedelta
 from supabase import create_client
 import pandas as pd
 from io import BytesIO
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
+# ===== НАСТРОЙКИ =====
 SUPABASE_URL = "https://ptdxlveqzmrrdlbtuxck.supabase.co"
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB0ZHhsdmVxem1ycmRsYnR1eGNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4Nzc0NTQsImV4cCI6MjA5NTQ1MzQ1NH0.nquoPERBIhu0IMdTKKv3qTQQStjdECtAOM-hsFMIx0A"
 
+# Email настройки (те же самые)
+SMTP_EMAIL = "valeraforumsch@gmail.com"
+SMTP_PASSWORD = "zwny cinl ejom qgsk"  # Вставь сюда свой 16-значный пароль
+
+PASSWORD = "admin123"  # Пароль для входа в панель
+
+# ===== ФУНКЦИИ =====
 def get_supabase():
     return create_client(SUPABASE_URL, SUPABASE_KEY)
 
@@ -18,24 +29,80 @@ def load_requests():
     else:
         return pd.DataFrame()
 
-def update_status(request_id, new_status):
+def update_status_with_notification(request_id, new_status):
+    """Обновляет статус и отправляет уведомление студенту"""
     supabase = get_supabase()
-    supabase.table('requests').update({'status': new_status}).eq('id', request_id).execute()
+    
+    # Получаем данные заявки
+    response = supabase.table('requests').select('*').eq('id', request_id).execute()
+    if response.data:
+        request = response.data[0]
+        student_email = request.get('email')
+        student_name = request.get('fio')
+        description = request.get('description')
+        
+        # Обновляем статус
+        supabase.table('requests').update({'status': new_status}).eq('id', request_id).execute()
+        
+        # Отправляем уведомление студенту
+        if student_email and student_email != 'не указан':
+            send_status_notification(student_email, student_name, request_id, new_status, description)
+        
+        return True
+    return False
 
-PASSWORD = "admin123"
+def send_status_notification(student_email, student_name, request_id, new_status, description):
+    """Отправляет студенту уведомление об изменении статуса"""
+    status_messages = {
+        "Новая": "Ваша заявка принята и ожидает рассмотрения.",
+        "В работе": "Специалисты ЖБУ приступили к выполнению вашей заявки.",
+        "Выполнена": "✅ Ваша заявка выполнена! Спасибо за обращение."
+    }
+    message = status_messages.get(new_status, f"Статус заявки изменен на '{new_status}'")
+    
+    subject = f"📝 ЖБУ Общежитие - Обновление статуса заявки #{request_id}"
+    body = f"""
+Здравствуйте, {student_name}!
+
+Статус вашей заявки #{request_id} изменился.
+
+📋 Текущий статус: {new_status}
+📝 Описание: {description[:200]}...
+
+{message}
+
+С уважением,
+Администрация ЖБУ Общежития
+"""
+    try:
+        msg = MIMEMultipart()
+        msg["From"] = SMTP_EMAIL
+        msg["To"] = student_email
+        msg["Subject"] = subject
+        msg.attach(MIMEText(body, "plain", "utf-8"))
+        
+        server = smtplib.SMTP("smtp.gmail.com", 587)
+        server.starttls()
+        server.login(SMTP_EMAIL, SMTP_PASSWORD)
+        server.send_message(msg)
+        server.quit()
+        return True
+    except Exception as e:
+        print(f"Ошибка отправки: {e}")
+        return False
 
 def to_excel(df):
-    """Преобразует DataFrame в Excel файл (BytesIO)"""
+    """Преобразует DataFrame в Excel файл"""
     output = BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
         df.to_excel(writer, index=False, sheet_name='Заявки')
-    processed_data = output.getvalue()
-    return processed_data
+    return output.getvalue()
 
+# ===== ОСНОВНОЕ ПРИЛОЖЕНИЕ =====
 def main():
     st.title("🔐 Панель работника ЖБУ")
 
-    # Сохраняем авторизацию при обновлении
+    # Авторизация
     if "authenticated" not in st.session_state:
         st.session_state.authenticated = False
 
@@ -68,59 +135,52 @@ def main():
         st.info("Пока нет ни одной заявки.")
         return
 
-    # Переименовываем колонки для красивого отображения
+    # Переименовываем колонки
     display_df = df.rename(columns={
-        "id": "ID", 
-        "date": "Дата", 
+        "id": "ID",
+        "date": "Дата",
         "time": "Время",
         "fio": "ФИО студента",
         "email": "Email",
         "room": "Комната",
-        "type": "Тип заявки", 
-        "description": "Описание", 
+        "type": "Тип заявки",
+        "description": "Описание",
         "status": "Статус"
     })
 
     # ===== ФИЛЬТРЫ =====
     st.subheader("🔍 Фильтры")
-    
+
     col1, col2, col3 = st.columns(3)
-    
+
     with col1:
-        # Фильтр по статусу
         status_filter = st.selectbox("Статус", ["Все", "Новая", "В работе", "Выполнена"])
-    
+
     with col2:
-        # Фильтр по дате
         date_options = ["Все", "Сегодня", "Вчера", "Эта неделя", "Выбрать дату"]
         date_filter_type = st.selectbox("Период", date_options)
-    
+
     with col3:
-        # Дополнительный фильтр по типу заявки
         type_options = ["Все", "Сантехника", "Электрика", "Уборка", "Мебель", "Другое"]
         type_filter = st.selectbox("Тип заявки", type_options)
-    
+
     # Применяем фильтры
     filtered_df = display_df.copy()
-    
-    # Фильтр по статусу
+
     if status_filter != "Все":
         filtered_df = filtered_df[filtered_df["Статус"] == status_filter]
-    
-    # Фильтр по типу
+
     if type_filter != "Все":
         type_map_filter = {
             "Сантехника": "santeh",
-            "Электрика": "electric", 
+            "Электрика": "electric",
             "Уборка": "cleaning",
             "Мебель": "furniture",
             "Другое": "other"
         }
         filtered_df = filtered_df[filtered_df["Тип заявки"] == type_map_filter[type_filter]]
-    
-    # Фильтр по дате
+
     today = datetime.now().date()
-    
     if date_filter_type == "Сегодня":
         filtered_df = filtered_df[filtered_df["Дата"] == today.strftime("%Y-%m-%d")]
     elif date_filter_type == "Вчера":
@@ -132,11 +192,10 @@ def main():
     elif date_filter_type == "Выбрать дату":
         selected_date = st.date_input("Выберите дату", value=today)
         filtered_df = filtered_df[filtered_df["Дата"] == selected_date.strftime("%Y-%m-%d")]
-    
-    # Показываем информацию о фильтрации
+
     st.info(f"📊 Найдено заявок: {len(filtered_df)} из {len(display_df)}")
-    
-    # Статистика по отфильтрованным данным
+
+    # Статистика
     col1, col2, col3, col4 = st.columns(4)
     with col1:
         st.metric("Всего в фильтре", len(filtered_df))
@@ -146,54 +205,42 @@ def main():
         st.metric("В работе", len(filtered_df[filtered_df["Статус"] == "В работе"]))
     with col4:
         st.metric("Выполнено", len(filtered_df[filtered_df["Статус"] == "Выполнена"]))
-    
-    # Отображаем таблицу
+
     st.dataframe(filtered_df, use_container_width=True)
-    
+
     # ===== ИЗМЕНЕНИЕ СТАТУСА =====
     st.subheader("✏️ Изменить статус заявки")
+
     col1, col2 = st.columns(2)
-    
+
     with col1:
         if not filtered_df.empty:
             selected_id = st.selectbox("Выберите ID заявки", filtered_df["ID"].tolist())
         else:
             selected_id = None
             st.warning("Нет заявок для изменения")
-    
+
     with col2:
         new_status = st.selectbox("Новый статус", ["Новая", "В работе", "Выполнена"])
-    
+
     if st.button("Обновить статус") and selected_id:
-        update_status(selected_id, new_status)
-        st.success(f"✅ Статус заявки #{selected_id} изменён на '{new_status}'")
-        st.rerun()
-    
+        if update_status_with_notification(selected_id, new_status):
+            st.success(f"✅ Статус заявки #{selected_id} изменён на '{new_status}', студент уведомлён")
+            st.rerun()
+        else:
+            st.error("❌ Ошибка при обновлении статуса")
+
     # ===== ЭКСПОРТ В EXCEL =====
     st.subheader("📥 Экспорт данных")
-    
-    export_col1, export_col2 = st.columns(2)
-    
-    with export_col1:
-        export_type = st.radio(
-            "Что экспортировать?",
-            ["Все заявки", "Только отфильтрованные"],
-            horizontal=True
-        )
-    
-    with export_col2:
-        if export_type == "Только отфильтрованные":
-            st.write(f"📄 Будет экспортировано: **{len(filtered_df)}** заявок")
-        else:
-            st.write(f"📄 Будет экспортировано: **{len(display_df)}** заявок")
-    
-    # Выбор формата экспорта
-    if export_type == "Только отфильтрованные":
-        export_df = filtered_df
-    else:
-        export_df = display_df
-    
-    # Кнопка скачивания Excel
+
+    export_type = st.radio(
+        "Что экспортировать?",
+        ["Все заявки", "Только отфильтрованные"],
+        horizontal=True
+    )
+
+    export_df = filtered_df if export_type == "Только отфильтрованные" else display_df
+
     excel_data = to_excel(export_df)
     st.download_button(
         label="📊 Скачать в Excel формате",
@@ -202,16 +249,6 @@ def main():
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         use_container_width=True
     )
-    
-    # Дополнительно: CSV
-    with st.expander("📄 Дополнительные форматы"):
-        csv = export_df.to_csv(index=False).encode("utf-8-sig")
-        st.download_button(
-            label="Скачать в CSV формате",
-            data=csv,
-            file_name=f"zayavki_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
-            mime="text/csv"
-        )
 
 if __name__ == "__main__":
     main()
