@@ -140,7 +140,6 @@ def main():
     
     if st.session_state.selected_dormitory == "Все":
         df = load_requests()
-        title = "Общая таблица всех заявок"
     else:
         df = load_requests_by_dormitory(st.session_state.selected_dormitory)
         title = f"Заявки: {st.session_state.selected_dormitory}"
@@ -150,9 +149,6 @@ def main():
     if df.empty:
         st.info("Пока нет ни одной заявки.")
         return
-
-    if st.button("🔄 Обновить сейчас"):
-            st.rerun()
         
     display_df = df.rename(columns={
                                     "id": "ID",
@@ -269,8 +265,10 @@ def main():
     with col4:
         st.metric("Выполнено", len(filtered_df[filtered_df["Статус"] == "Выполнена"]))
 
-    st.dataframe(filtered_df, use_container_width=True)
+    if st.button("🔄 Обновить сейчас"):
+            st.rerun()
 
+    st.dataframe(filtered_df, use_container_width=True)
     
     st.subheader("✏️ Изменить статус заявки")
 
