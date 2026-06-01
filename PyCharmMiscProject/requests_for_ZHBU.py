@@ -140,9 +140,12 @@ def main():
     
     if st.session_state.selected_dormitory == "Все":
         df = load_requests()
+        title = "Общая таблица всех заявок"
     else:
         df = load_requests_by_dormitory(st.session_state.selected_dormitory)
         title = f"Заявки: {st.session_state.selected_dormitory}"
+    
+    st.subheader(title)
 
     if df.empty:
         st.info("Пока нет ни одной заявки.")
