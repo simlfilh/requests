@@ -245,19 +245,20 @@ def main():
                     try:
                         request_id_int = int(delete_request_id)
                         success, message = delete_request(request_id_int, delete_email)
-                    if success:
-                        st.success(f"✅ {message}")
+                        if success:
+                            st.success(f"✅ {message}")
                             st.balloons()
                             # Отправляем уведомление работникам об удалении
                             notification_body = f"Заявка №{request_id_int} была удалена пользователем {delete_email}"
                             for worker_email in WORKER_EMAILS:
-                            send_email(worker_email, f"🗑️ Заявка №{request_id_int} удалена", notification_body)
+                                send_email(worker_email, f"🗑️ Заявка №{request_id_int} удалена", notification_body)
                         else:
                             st.error(f"❌ {message}")
                     except ValueError:
                         st.error("❌ ID заявки должен быть числом")
             else:
                 st.error("❌ Введите email и ID заявки для удаления")
+        
 
 if __name__ == "__main__":
     main()
