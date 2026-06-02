@@ -331,13 +331,14 @@ def main():
 
     st.dataframe(filtered_df, use_container_width=True)
     
+    st.markdown("---")
     st.subheader("✏️ Управление заявкой")
     
-    col1, col2, col3 = st.columns(3)
+    col1, col2 = st.columns(2)
     
     with col1:
         if not filtered_df.empty:
-            selected_id = st.selectbox("Выберите № заявки", filtered_df["ID"].tolist(), key="select_id")
+            selected_id = st.selectbox("Выберите № заявки для изменения статуса", filtered_df["ID"].tolist(), key="select_id")
         else:
             selected_id = None
             st.warning("Нет заявок для изменения")
@@ -345,36 +346,33 @@ def main():
     with col2:
         new_status = st.selectbox("Новый статус", ["Новая", "В работе", "Выполнена"], key="new_status")
     
-    with col3:
-        if st.button("🔄 Обновить статус", key="update_status_btn") and selected_id:
-            if update_status_with_notification(selected_id, new_status):
-                st.success(f"✅ Статус заявки #{selected_id} изменён на '{new_status}', студент уведомлён")
-                time.sleep(1)
-                st.rerun()
-            else:
-                st.error("❌ Ошибка при обновлении статуса")
+    if st.button("🔄 Обновить статус", key="update_status_btn") and selected_id:
+        if update_status_with_notification(selected_id, new_status):
+            st.success(f"✅ Статус заявки #{selected_id} изменён на '{new_status}', студент уведомлён")
+            time.sleep(1)
+            st.rerun()
+        else:
+            st.error("❌ Ошибка при обновлении статуса")
     
-    # Секция удаления заявки
     st.markdown("---")
     st.subheader("🗑️ Удаление заявки")
     
-    col1, col2, col3 = st.columns([1, 1, 2])
+    col1, col2 = st.columns(2)
     
     with col1:
-        delete_id = st.number_input("Введите ID заявки для удаления", 
-                                   min_value=1, 
-                                   step=1,
-                                   key="delete_id_input",
-                                   help="Введите номер заявки, которую хотите удалить")
+        if not filtered_df.empty:
+            delete_id = st.selectbox("Выберите № заявки для удаления", filtered_df["ID"].tolist(), key="delete_select_id")
+        else:
+            delete_id = None
+            st.warning("Нет заявок для удаления")
     
     with col2:
-        if st.button("🗑️ Удалить заявку", key="delete_btn"):
+        if st.button("🗑️ Удалить выбранную заявку", key="delete_btn"):
             if delete_id:
-                # Показываем диалог подтверждения
                 st.session_state.show_delete_confirm = True
                 st.session_state.delete_id = delete_id
             else:
-                st.error("❌ Введите ID заявки")
+                st.error("❌ Нет заявок для удаления")
     
     # Диалог подтверждения удаления
     if st.session_state.show_delete_confirm:
@@ -405,6 +403,7 @@ def main():
                     st.session_state.delete_id = None
                     st.rerun()
     
+    st.markdown("---")
     st.subheader("📥 Экспорт данных")
 
     export_type = st.radio(
