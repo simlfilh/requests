@@ -9,16 +9,13 @@ from email.mime.multipart import MIMEMultipart
 import time
 
 
-SUPABASE_URL = "https://ptdxlveqzmrrdlbtuxck.supabase.co"
-SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB0ZHhsdmVxem1ycmRsYnR1eGNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4Nzc0NTQsImV4cCI6MjA5NTQ1MzQ1NH0.nquoPERBIhu0IMdTKKv3qTQQStjdECtAOM-hsFMIx0A"
+SUPABASE_URL = st.secrets["SUPABASE_URL"]
+SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
+SMTP_EMAIL = st.secrets["SMTP_EMAIL"]
+SMTP_PASSWORD = st.secrets["SMTP_PASSWORD"]
+PASSWORD = st.secrets["PASSWORD"] 
 
 
-SMTP_EMAIL = "valeraforumsch@gmail.com"
-SMTP_PASSWORD = "zwny cinl ejom qgsk"  
-
-PASSWORD = "admin123"  
-
-# Список общежитий
 DORMITORIES = [
     "Общежитие №2 | Чкаловский пр-т, д. 27",
     "Общежитие №3 | пр-т Косыгина, д. 19, к. 2",
