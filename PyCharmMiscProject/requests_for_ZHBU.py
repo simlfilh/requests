@@ -42,6 +42,66 @@ def load_requests_by_dormitory(dormitory):
     else:
         return pd.DataFrame()
 
+def delete_request(request_id):
+    """Удаление заявки по ID"""
+    try:
+        supabase = get_supabase()
+        
+        # Получаем данные заявки перед удалением для уведомления
+        response = supabase.table('requests').select('*').eq('id', request_id).execute()
+        if response.data:
+            request_data = response.data[0]
+            
+            # Удаляем заявку
+            supabase.table('requests').delete().eq('id', request_id).execute()
+            
+            # Отправляем уведомление работникам
+            send_deletion_notification_to_workers(request_data)
+            
+            return True, f"Заявка №{request_id} успешно удалена"
+        else:
+            return False, "Заявка не найдена"
+    except Exception as e:
+        return False, f"Ошибка при удалении: {str(e)}"
+
+def send_deletion_notification_to_workers(request_data):
+    """Отправка уведомления работникам об удалении заявки"""
+    subject = f"🗑️ ЗАЯВКА №{request_data['id']} УДАЛЕНА"
+    body = f"""
+Была удалена следующая заявка:
+
+📋 ЗАЯВКА №{request_data['id']}
+🏠 {request_data['dormitory']}
+👤 Студент: {request_data['fio']}
+📧 Email: {request_data['email']}
+🚪 Комната: {request_data['room']}
+🔧 Тип: {request_data['type']}
+📝 Описание: {request_data['description']}
+📅 Дата создания: {request_data['date']} {request_data['time']}
+❌ Статус: УДАЛЕНА
+
+Заявка была удалена из системы.
+"""
+    WORKER_EMAILS = [
+        "valeraforumsch@gmail.com"
+    ]
+    
+    for worker_email in WORKER_EMAILS:
+        try:
+            msg = MIMEMultipart()
+            msg["From"] = SMTP_EMAIL
+            msg["To"] = worker_email
+            msg["Subject"] = subject
+            msg.attach(MIMEText(body, "plain", "utf-8"))
+            
+            server = smtplib.SMTP("smtp.gmail.com", 587)
+            server.starttls()
+            server.login(SMTP_EMAIL, SMTP_PASSWORD)
+            server.send_message(msg)
+            server.quit()
+        except Exception as e:
+            print(f"Ошибка отправки уведомления работнику {worker_email}: {e}")
+
 def update_status_with_notification(request_id, new_status):
     supabase = get_supabase()
     
@@ -113,6 +173,8 @@ def main():
         st.session_state.authenticated = False
     if "selected_dormitory" not in st.session_state:
         st.session_state.selected_dormitory = "Все"
+    if "delete_confirm" not in st.session_state:
+        st.session_state.delete_confirm = None
 
     if not st.session_state.authenticated:
         with st.form("login_form"):
@@ -263,10 +325,80 @@ def main():
         st.metric("Выполнено", len(filtered_df[filtered_df["Статус"] == "Выполнена"]))
 
     if st.button("🔄 Обновить сейчас"):
-            st.rerun()
+        st.rerun()
 
-    st.dataframe(filtered_df, use_container_width=True)
+    # Создаем копию DataFrame с кнопками удаления
+    display_filtered_df = filtered_df.copy()
     
+    # Добавляем колонку для кнопок удаления
+    if not display_filtered_df.empty:
+        # Создаем колонку с HTML кнопками
+        delete_buttons = []
+        for idx, row in display_filtered_df.iterrows():
+            request_id = row['ID']
+            button_key = f"delete_{request_id}"
+            
+            # Используем колонки для кнопки удаления
+            col1, col2, col3 = st.columns([0.8, 0.1, 0.1])
+            with col1:
+                st.write(f"**{request_id}**")
+            with col2:
+                if st.button("❌", key=button_key, help=f"Удалить заявку №{request_id}"):
+                    st.session_state.delete_confirm = request_id
+            
+            # Показываем остальные данные в строке
+            with col3:
+                # Пустой контейнер для выравнивания
+                pass
+            
+            # Отображаем остальные колонки в одной строке
+            cols_data = st.columns([1, 1, 1.5, 1.5, 1, 2, 1])
+            with cols_data[0]:
+                st.write(row['Дата'])
+            with cols_data[1]:
+                st.write(row['Время'])
+            with cols_data[2]:
+                st.write(row['ФИО студента'])
+            with cols_data[3]:
+                st.write(row['Email'])
+            with cols_data[4]:
+                st.write(row['Комната'])
+            with cols_data[5]:
+                st.write(row['Описание'][:50] + "..." if len(str(row['Описание'])) > 50 else row['Описание'])
+            with cols_data[6]:
+                st.write(row['Статус'])
+            
+            st.divider()
+        
+        # Обработка подтверждения удаления
+        if st.session_state.delete_confirm:
+            request_id_to_delete = st.session_state.delete_confirm
+            
+            # Создаем диалог подтверждения
+            with st.container():
+                st.warning(f"⚠️ Вы уверены, что хотите удалить заявку №{request_id_to_delete}?")
+                col_yes, col_no = st.columns(2)
+                
+                with col_yes:
+                    if st.button("✅ Да, удалить", key="confirm_delete"):
+                        success, message = delete_request(request_id_to_delete)
+                        if success:
+                            st.success(f"✅ {message}")
+                            st.session_state.delete_confirm = None
+                            time.sleep(1)
+                            st.rerun()
+                        else:
+                            st.error(f"❌ {message}")
+                            st.session_state.delete_confirm = None
+                            st.rerun()
+                
+                with col_no:
+                    if st.button("❌ Отмена", key="cancel_delete"):
+                        st.session_state.delete_confirm = None
+                        st.rerun()
+    else:
+        st.info("Нет заявок для отображения")
+
     st.subheader("✏️ Изменить статус заявки")
 
     col1, col2 = st.columns(2)
