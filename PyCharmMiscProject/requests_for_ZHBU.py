@@ -173,8 +173,10 @@ def main():
         st.session_state.authenticated = False
     if "selected_dormitory" not in st.session_state:
         st.session_state.selected_dormitory = "Все"
-    if "delete_confirm" not in st.session_state:
-        st.session_state.delete_confirm = None
+    if "show_delete_confirm" not in st.session_state:
+        st.session_state.show_delete_confirm = False
+    if "delete_id" not in st.session_state:
+        st.session_state.delete_id = None
 
     if not st.session_state.authenticated:
         with st.form("login_form"):
@@ -327,100 +329,82 @@ def main():
     if st.button("🔄 Обновить сейчас"):
         st.rerun()
 
-    # Создаем копию DataFrame с кнопками удаления
-    display_filtered_df = filtered_df.copy()
+    st.dataframe(filtered_df, use_container_width=True)
     
-    # Добавляем колонку для кнопок удаления
-    if not display_filtered_df.empty:
-        # Создаем колонку с HTML кнопками
-        delete_buttons = []
-        for idx, row in display_filtered_df.iterrows():
-            request_id = row['ID']
-            button_key = f"delete_{request_id}"
-            
-            # Используем колонки для кнопки удаления
-            col1, col2, col3 = st.columns([0.8, 0.1, 0.1])
-            with col1:
-                st.write(f"**{request_id}**")
-            with col2:
-                if st.button("❌", key=button_key, help=f"Удалить заявку №{request_id}"):
-                    st.session_state.delete_confirm = request_id
-            
-            # Показываем остальные данные в строке
-            with col3:
-                # Пустой контейнер для выравнивания
-                pass
-            
-            # Отображаем остальные колонки в одной строке
-            cols_data = st.columns([1, 1, 1.5, 1.5, 1, 2, 1])
-            with cols_data[0]:
-                st.write(row['Дата'])
-            with cols_data[1]:
-                st.write(row['Время'])
-            with cols_data[2]:
-                st.write(row['ФИО студента'])
-            with cols_data[3]:
-                st.write(row['Email'])
-            with cols_data[4]:
-                st.write(row['Комната'])
-            with cols_data[5]:
-                st.write(row['Описание'][:50] + "..." if len(str(row['Описание'])) > 50 else row['Описание'])
-            with cols_data[6]:
-                st.write(row['Статус'])
-            
-            st.divider()
-        
-        # Обработка подтверждения удаления
-        if st.session_state.delete_confirm:
-            request_id_to_delete = st.session_state.delete_confirm
-            
-            # Создаем диалог подтверждения
-            with st.container():
-                st.warning(f"⚠️ Вы уверены, что хотите удалить заявку №{request_id_to_delete}?")
-                col_yes, col_no = st.columns(2)
-                
-                with col_yes:
-                    if st.button("✅ Да, удалить", key="confirm_delete"):
-                        success, message = delete_request(request_id_to_delete)
-                        if success:
-                            st.success(f"✅ {message}")
-                            st.session_state.delete_confirm = None
-                            time.sleep(1)
-                            st.rerun()
-                        else:
-                            st.error(f"❌ {message}")
-                            st.session_state.delete_confirm = None
-                            st.rerun()
-                
-                with col_no:
-                    if st.button("❌ Отмена", key="cancel_delete"):
-                        st.session_state.delete_confirm = None
-                        st.rerun()
-    else:
-        st.info("Нет заявок для отображения")
-
-    st.subheader("✏️ Изменить статус заявки")
-
-    col1, col2 = st.columns(2)
-
+    st.subheader("✏️ Управление заявкой")
+    
+    col1, col2, col3 = st.columns(3)
+    
     with col1:
         if not filtered_df.empty:
-            selected_id = st.selectbox("Выберите № заявки", filtered_df["ID"].tolist())
+            selected_id = st.selectbox("Выберите № заявки", filtered_df["ID"].tolist(), key="select_id")
         else:
             selected_id = None
             st.warning("Нет заявок для изменения")
-
+    
     with col2:
-        new_status = st.selectbox("Новый статус", ["Новая", "В работе", "Выполнена"])
-
-    if st.button("Обновить статус") and selected_id:
-        if update_status_with_notification(selected_id, new_status):
-            st.success(f"✅ Статус заявки #{selected_id} изменён на '{new_status}', студент уведомлён")
-            st.rerun()
-        else:
-            st.error("❌ Ошибка при обновлении статуса")
-
-   
+        new_status = st.selectbox("Новый статус", ["Новая", "В работе", "Выполнена"], key="new_status")
+    
+    with col3:
+        if st.button("🔄 Обновить статус", key="update_status_btn") and selected_id:
+            if update_status_with_notification(selected_id, new_status):
+                st.success(f"✅ Статус заявки #{selected_id} изменён на '{new_status}', студент уведомлён")
+                time.sleep(1)
+                st.rerun()
+            else:
+                st.error("❌ Ошибка при обновлении статуса")
+    
+    # Секция удаления заявки
+    st.markdown("---")
+    st.subheader("🗑️ Удаление заявки")
+    
+    col1, col2, col3 = st.columns([1, 1, 2])
+    
+    with col1:
+        delete_id = st.number_input("Введите ID заявки для удаления", 
+                                   min_value=1, 
+                                   step=1,
+                                   key="delete_id_input",
+                                   help="Введите номер заявки, которую хотите удалить")
+    
+    with col2:
+        if st.button("🗑️ Удалить заявку", key="delete_btn"):
+            if delete_id:
+                # Показываем диалог подтверждения
+                st.session_state.show_delete_confirm = True
+                st.session_state.delete_id = delete_id
+            else:
+                st.error("❌ Введите ID заявки")
+    
+    # Диалог подтверждения удаления
+    if st.session_state.show_delete_confirm:
+        with st.container():
+            st.warning(f"⚠️ Вы уверены, что хотите удалить заявку №{st.session_state.delete_id}?")
+            st.info("Это действие невозможно отменить. Заявка будет полностью удалена из базы данных.")
+            
+            col_yes, col_no = st.columns(2)
+            
+            with col_yes:
+                if st.button("✅ Да, удалить навсегда", key="confirm_delete_final"):
+                    success, message = delete_request(st.session_state.delete_id)
+                    if success:
+                        st.success(f"✅ {message}")
+                        st.session_state.show_delete_confirm = False
+                        st.session_state.delete_id = None
+                        time.sleep(1)
+                        st.rerun()
+                    else:
+                        st.error(f"❌ {message}")
+                        st.session_state.show_delete_confirm = False
+                        st.session_state.delete_id = None
+                        st.rerun()
+            
+            with col_no:
+                if st.button("❌ Отмена", key="cancel_delete_final"):
+                    st.session_state.show_delete_confirm = False
+                    st.session_state.delete_id = None
+                    st.rerun()
+    
     st.subheader("📥 Экспорт данных")
 
     export_type = st.radio(
