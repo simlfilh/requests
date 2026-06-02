@@ -129,7 +129,7 @@ def main():
         
         dormitory = st.selectbox("Выберите общежитие *", DORMITORIES)
         
-        room = st.text_input("Номер блока")
+        room = st.text_input("Номер блока/комнаты, например: 10/1")
 
         type_map = {
             "🔧 Сантехника": "Сантехника",
