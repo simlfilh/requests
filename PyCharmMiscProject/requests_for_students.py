@@ -47,6 +47,34 @@ def save_request(data):
         return result.data[0]['id']
     return None
 
+def delete_request(request_id, request_email=None):
+    """Удаление заявки по ID"""
+    try:
+        supabase = get_supabase()
+        
+        # Если указан email, проверяем, что заявка принадлежит этому email
+        if request_email:
+            result = supabase.table('requests').delete().eq('id', request_id).eq('email', request_email).execute()
+        else:
+            result = supabase.table('requests').delete().eq('id', request_id).execute()
+        
+        if result.data:
+            return True, "Заявка успешно удалена"
+        else:
+            return False, "Заявка не найдена или у вас нет прав на её удаление"
+    except Exception as e:
+        return False, f"Ошибка при удалении: {str(e)}"
+
+def get_user_requests(email):
+    """Получение всех заявок пользователя по email"""
+    try:
+        supabase = get_supabase()
+        result = supabase.table('requests').select('*').eq('email', email).order('date', desc=True).order('time', desc=True).execute()
+        return result.data if result.data else []
+    except Exception as e:
+        st.error(f"Ошибка при получении заявок: {e}")
+        return []
+
 def send_email(to_email, subject, body):
     try:
         msg = MIMEMultipart()
@@ -119,62 +147,126 @@ def validate_email(email):
 
 def main():
     st.title("🏠 ЖБУ СПбГЭУ | Электронные заявки")
-    st.markdown("Заполните форму ниже, чтобы оставить заявку на ремонт.")
-
-    with st.form("student_form"):
-        fio = st.text_input("Ваше ФИО")
-        email = st.text_input("Email для связи", 
-                              placeholder="example@mail.ru",
-                              help="На этот email придет подтверждение заявки")
+    
+    # Создаем вкладки
+    tab1, tab2 = st.tabs(["📝 Создать заявку", "🗑️ Управление заявками"])
+    
+    with tab1:
+        st.markdown("Заполните форму ниже, чтобы оставить заявку на ремонт.")
         
-        dormitory = st.selectbox("Выберите общежитие *", DORMITORIES)
-        
-        room = st.text_input("Номер блока/комнаты, например: 10/1")
+        with st.form("student_form"):
+            fio = st.text_input("Ваше ФИО")
+            email = st.text_input("Email для связи", 
+                                  placeholder="example@mail.ru",
+                                  help="На этот email придет подтверждение заявки")
+            
+            dormitory = st.selectbox("Выберите общежитие *", DORMITORIES)
+            
+            room = st.text_input("Номер блока/комнаты, например: 10/1")
 
-        type_map = {
-            "🔧 Сантехника": "Сантехника",
-            "⚡ Электрика": "Электрика",
-            "🧹 Уборка": "Уборка",
-            "❓ Вопрос / Другое": "Вопрос / Другое"
-        }
-        type_display = st.selectbox("Тип заявки", list(type_map.keys()))
+            type_map = {
+                "🔧 Сантехника": "Сантехника",
+                "⚡ Электрика": "Электрика",
+                "🧹 Уборка": "Уборка",
+                "❓ Вопрос / Другое": "Вопрос / Другое"
+            }
+            type_display = st.selectbox("Тип заявки", list(type_map.keys()))
 
-        description = st.text_area("Описание проблемы / Текст вопроса", height=150)
+            description = st.text_area("Описание проблемы / Текст вопроса", height=150)
 
-        submitted = st.form_submit_button("Отправить заявку")
+            submitted = st.form_submit_button("Отправить заявку")
 
-        if submitted:
-            if not fio or not email or not room or not description:
-                st.error("❌ Пожалуйста, заполните все поля")
-            elif not validate_email(email):
-                st.error("❌ Пожалуйста, введите корректный email адрес")
-            else:
-                utc_now = datetime.now(timezone.utc)
-                local_now = utc_now + timedelta(hours=3)
-                
-                request_data = {
-                    "date": local_now.strftime("%Y-%m-%d"),
-                    "time": local_now.strftime("%H:%M:%S"),
-                    "fio": fio,
-                    "email": email,
-                    "dormitory": dormitory,
-                    "room": room,
-                    "type": type_map[type_display],
-                    "description": description
-                }
-                try:
-                    new_id = save_request(request_data)
+            if submitted:
+                if not fio or not email or not room or not description:
+                    st.error("❌ Пожалуйста, заполните все поля")
+                elif not validate_email(email):
+                    st.error("❌ Пожалуйста, введите корректный email адрес")
+                else:
+                    utc_now = datetime.now(timezone.utc)
+                    local_now = utc_now + timedelta(hours=3)
                     
-                    if new_id:
-                        send_confirmation_to_student(email, fio, new_id, description, dormitory)
-                        send_notification_to_workers(fio, email, room, new_id, type_map[type_display], description, dormitory)
+                    request_data = {
+                        "date": local_now.strftime("%Y-%m-%d"),
+                        "time": local_now.strftime("%H:%M:%S"),
+                        "fio": fio,
+                        "email": email,
+                        "dormitory": dormitory,
+                        "room": room,
+                        "type": type_map[type_display],
+                        "description": description
+                    }
+                    try:
+                        new_id = save_request(request_data)
                         
-                        st.success(f"✅ Заявка успешно отправлена! Подтверждение придет на вашу почту.")
-                        st.balloons()
+                        if new_id:
+                            send_confirmation_to_student(email, fio, new_id, description, dormitory)
+                            send_notification_to_workers(fio, email, room, new_id, type_map[type_display], description, dormitory)
+                            
+                            st.success(f"✅ Заявка №{new_id} успешно отправлена! Подтверждение придет на вашу почту.")
+                            st.balloons()
+                        else:
+                            st.error("❌ Ошибка при сохранении заявки. Попробуйте еще раз.")
+                    except Exception as e:
+                        st.error(f"❌ Ошибка: {e}")
+    
+    with tab2:
+        st.markdown("### Удаление заявки")
+        st.markdown("Введите ваш email и ID заявки, чтобы удалить её")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            delete_email = st.text_input("Ваш email", key="delete_email")
+        
+        with col2:
+            delete_request_id = st.text_input("Номер заявки", key="delete_id")
+        
+        if st.button("🔍 Показать мои заявки", key="show_requests"):
+            if delete_email and validate_email(delete_email):
+                user_requests = get_user_requests(delete_email)
+                if user_requests:
+                    st.success(f"Найдено {len(user_requests)} заявок")
+                    
+                    # Создаем DataFrame для отображения
+                    df = pd.DataFrame(user_requests)
+                    df_display = df[['id', 'date', 'time', 'type', 'dormitory', 'room', 'status', 'description']]
+                    df_display.columns = ['ID', 'Дата', 'Время', 'Тип', 'Общежитие', 'Комната', 'Статус', 'Описание']
+                    st.dataframe(df_display, use_container_width=True)
+                else:
+                    st.warning("Заявки не найдены")
+            else:
+                st.error("Введите корректный email")
+        
+        col1, col2, col3 = st.columns([1, 1, 2])
+        
+        with col1:
+            if st.button("🗑️ Удалить заявку", key="delete_button"):
+                if delete_email and delete_request_id:
+                    if not validate_email(delete_email):
+                        st.error("❌ Неверный формат email")
                     else:
-                        st.error("❌ Ошибка при сохранении заявки. Попробуйте еще раз.")
-                except Exception as e:
-                    st.error(f"❌ Ошибка: {e}")
+                        try:
+                            request_id_int = int(delete_request_id)
+                            success, message = delete_request(request_id_int, delete_email)
+                            if success:
+                                st.success(f"✅ {message}")
+                                st.balloons()
+                                # Отправляем уведомление работникам об удалении
+                                notification_body = f"Заявка №{request_id_int} была удалена пользователем {delete_email}"
+                                for worker_email in WORKER_EMAILS:
+                                    send_email(worker_email, f"🗑️ Заявка №{request_id_int} удалена", notification_body)
+                            else:
+                                st.error(f"❌ {message}")
+                        except ValueError:
+                            st.error("❌ ID заявки должен быть числом")
+                else:
+                    st.error("❌ Введите email и ID заявки для удаления")
+        
+        with col2:
+            if st.button("🔄 Очистить", key="clear_button"):
+                st.session_state.delete_email = ""
+                st.session_state.delete_id = ""
+                st.rerun()
 
 if __name__ == "__main__":
     main()
