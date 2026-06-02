@@ -133,7 +133,7 @@ def main():
         st.session_state.authenticated = False
         st.rerun()
     
-    st.header("📋 Все заявки студентов")
+    st.header("📋 Электронные заявки студентов")
     
     if st.session_state.selected_dormitory == "Все":
         df = load_requests()
@@ -232,7 +232,6 @@ def main():
             "Сантехника": "Сантехника",
             "Электрика": "Электрика",
             "Уборка": "Уборка",
-            "Общежитие для СПО": "Общежитие для СПО",
             "Другое": "Другое"
         }
         filtered_df = filtered_df[filtered_df["Тип заявки"] == type_map_filter[type_filter]]
