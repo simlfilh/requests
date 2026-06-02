@@ -373,8 +373,7 @@ def main():
     # Диалог подтверждения удаления
     if st.session_state.show_delete_confirm:
         with st.container():
-            st.warning(f"⚠️ Вы уверены, что хотите удалить заявку №{st.session_state.delete_id}?
-            Это действие невозможно отменить. Заявка будет полностью удалена из базы данных.")
+            st.warning(f"⚠️ Вы уверены, что хотите удалить заявку №{st.session_state.delete_id}? Это действие невозможно отменить. Заявка будет полностью удалена из базы данных.")
             
             col_yes, col_no = st.columns(2)
             
