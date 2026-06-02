@@ -357,22 +357,18 @@ def main():
     st.markdown("---")
     st.subheader("🗑️ Удаление заявки")
     
-    col1, col2 = st.columns(2)
+    if not filtered_df.empty:
+        delete_id = st.selectbox("Выберите № заявки для удаления", filtered_df["ID"].tolist(), key="delete_select_id")
+    else:
+        delete_id = None
+        st.warning("Нет заявок для удаления")
     
-    with col1:
-        if not filtered_df.empty:
-            delete_id = st.selectbox("Выберите № заявки для удаления", filtered_df["ID"].tolist(), key="delete_select_id")
+    if st.button("🗑️ Удалить выбранную заявку", key="delete_btn"):
+        if delete_id:
+            st.session_state.show_delete_confirm = True
+            st.session_state.delete_id = delete_id
         else:
-            delete_id = None
-            st.warning("Нет заявок для удаления")
-    
-    with col2:
-        if st.button("🗑️ Удалить выбранную заявку", key="delete_btn"):
-            if delete_id:
-                st.session_state.show_delete_confirm = True
-                st.session_state.delete_id = delete_id
-            else:
-                st.error("❌ Нет заявок для удаления")
+            st.error("❌ Нет заявок для удаления")
     
     # Диалог подтверждения удаления
     if st.session_state.show_delete_confirm:
