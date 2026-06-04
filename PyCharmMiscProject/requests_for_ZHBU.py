@@ -167,7 +167,7 @@ def to_excel(df):
 
 
 def main():
-    st.title("🔐 Панель работника ЖБУ")
+    st.title("🔐 Панель работника ЖБУ | Управление электронными заявками")
 
     if "authenticated" not in st.session_state:
         st.session_state.authenticated = False
