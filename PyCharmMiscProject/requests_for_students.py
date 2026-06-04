@@ -223,11 +223,8 @@ def main():
         
         with col1:
             delete_email = st.text_input("Ваш email", key="delete_email")
-        
-        with col2:
-            delete_request_id = st.text_input("Номер заявки", key="delete_id")
-        
-        if st.button("🔍 Показать мои заявки", key="show_requests"):
+
+            if st.button("🔍 Показать мои заявки", key="show_requests"):
             if delete_email and validate_email(delete_email):
                 user_requests = get_user_requests(delete_email)
                 if user_requests:
@@ -243,27 +240,30 @@ def main():
             else:
                 st.error("Введите корректный email")
         
-        if st.button("🗑️ Удалить заявку", key="delete_button"):
-            if delete_email and delete_request_id:
-                if not validate_email(delete_email):
-                    st.error("❌ Неверный формат email")
+        with col2:
+            delete_request_id = st.text_input("Номер заявки", key="delete_id")
+        
+            if st.button("🗑️ Удалить заявку", key="delete_button"):
+                if delete_email and delete_request_id:
+                    if not validate_email(delete_email):
+                        st.error("❌ Неверный формат email")
+                    else:
+                        try:
+                            request_id_int = int(delete_request_id)
+                            success, message = delete_request(request_id_int, delete_email)
+                            if success:
+                                st.success(f"✅ {message}")
+                                st.balloons()
+                                # Отправляем уведомление работникам об удалении
+                                notification_body = f"Заявка №{request_id_int} была удалена пользователем {delete_email}"
+                                for worker_email in WORKER_EMAILS:
+                                    send_email(worker_email, f"🗑️ Заявка №{request_id_int} удалена", notification_body)
+                            else:
+                                st.error(f"❌ {message}")
+                        except ValueError:
+                            st.error("❌ ID заявки должен быть числом")
                 else:
-                    try:
-                        request_id_int = int(delete_request_id)
-                        success, message = delete_request(request_id_int, delete_email)
-                        if success:
-                            st.success(f"✅ {message}")
-                            st.balloons()
-                            # Отправляем уведомление работникам об удалении
-                            notification_body = f"Заявка №{request_id_int} была удалена пользователем {delete_email}"
-                            for worker_email in WORKER_EMAILS:
-                                send_email(worker_email, f"🗑️ Заявка №{request_id_int} удалена", notification_body)
-                        else:
-                            st.error(f"❌ {message}")
-                    except ValueError:
-                        st.error("❌ ID заявки должен быть числом")
-            else:
-                st.error("❌ Введите email и ID заявки для удаления")
+                    st.error("❌ Введите email и ID заявки для удаления")
         
 
 if __name__ == "__main__":
