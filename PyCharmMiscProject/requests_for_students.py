@@ -231,7 +231,7 @@ def main():
                     df = pd.DataFrame(user_requests)
                     df_display = df[['id', 'date', 'time', 'type', 'dormitory', 'room', 'status', 'description']]
                     df_display.columns = ['ID', 'Дата', 'Время', 'Тип', 'Общежитие', 'Комната', 'Статус', 'Описание']
-                    st.dataframe(df_display, use_container_width=True)
+                    st.dataframe(df_display, use_container_width=True, hide_index=True)
                 else:
                     st.warning("Заявки не найдены")
             else:
