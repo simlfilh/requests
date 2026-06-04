@@ -8,6 +8,12 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import time
 
+st.set_page_config(
+    page_title="Управление электронными заявками | Общежития СПбГЭУ",
+    page_icon="📲",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
 SUPABASE_URL = st.secrets["SUPABASE_URL"]
 SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
