@@ -283,7 +283,7 @@ def main():
         date_filter_type = st.selectbox("Период", date_options)
 
     with col3:
-        type_options = ["Все", "Сантехника", "Электрика", "Уборка", "Общежитие для СПО", "Другое"]
+        type_options = ["Все", "Сантехника", "Электрика", "Уборка", "Другое"]
         type_filter = st.selectbox("Тип заявки", type_options)
 
     filtered_df = display_df.copy()
