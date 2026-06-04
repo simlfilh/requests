@@ -225,20 +225,20 @@ def main():
             delete_email = st.text_input("Ваш email", key="delete_email")
 
             if st.button("🔍 Показать мои заявки", key="show_requests"):
-            if delete_email and validate_email(delete_email):
-                user_requests = get_user_requests(delete_email)
-                if user_requests:
-                    st.success(f"Найдено {len(user_requests)} заявок")
-                    
-                    # Создаем DataFrame для отображения
-                    df = pd.DataFrame(user_requests)
-                    df_display = df[['id', 'date', 'time', 'type', 'dormitory', 'room', 'status', 'description']]
-                    df_display.columns = ['ID', 'Дата', 'Время', 'Тип', 'Общежитие', 'Комната', 'Статус', 'Описание']
-                    st.dataframe(df_display, use_container_width=True, hide_index=True)
+                if delete_email and validate_email(delete_email):
+                    user_requests = get_user_requests(delete_email)
+                    if user_requests:
+                        st.success(f"Найдено {len(user_requests)} заявок")
+                        
+                        # Создаем DataFrame для отображения
+                        df = pd.DataFrame(user_requests)
+                        df_display = df[['id', 'date', 'time', 'type', 'dormitory', 'room', 'status', 'description']]
+                        df_display.columns = ['ID', 'Дата', 'Время', 'Тип', 'Общежитие', 'Комната', 'Статус', 'Описание']
+                        st.dataframe(df_display, use_container_width=True, hide_index=True)
+                    else:
+                        st.warning("Заявки не найдены")
                 else:
-                    st.warning("Заявки не найдены")
-            else:
-                st.error("Введите корректный email")
+                    st.error("Введите корректный email")
         
         with col2:
             delete_request_id = st.text_input("Номер заявки", key="delete_id")
