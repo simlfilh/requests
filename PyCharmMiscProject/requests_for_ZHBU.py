@@ -248,7 +248,7 @@ def main():
                 })
         
         stats_df = pd.DataFrame(stats_data)
-        st.dataframe(stats_df, use_container_width=True)
+        st.dataframe(filtered_df, use_container_width=True, hide_index=True)
         
         for dorm in DORMITORIES:
             with st.expander(f"📋 {dorm}", expanded=False):
