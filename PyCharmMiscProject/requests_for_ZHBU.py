@@ -327,7 +327,7 @@ def main():
                     st.download_button(
                         label=f"📊 Скачать в Excel формате",
                         data=excel_data,
-                        file_name=f"Заявки_{dorm.replace(' | ', '_')}_{datetime.now().strftime('%d.%m.%Y_%H:%M:%S')}.xlsx",
+                        file_name=f"Электронные заявки {dorm.replace(' | ', '_')} {datetime.now().strftime('%d.%m.%Y_%H:%M:%S')}.xlsx",
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                         key=f"export_{dorm}"
                     )
@@ -474,7 +474,7 @@ def main():
     st.download_button(
         label="📊 Скачать в Excel формате",
         data=excel_data,
-        file_name=f"zayavki_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+        file_name=f"Электронные заявки {datetime.now().strftime('%d.%m.%Y %H:%M:%S')}.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         use_container_width=True
     )
