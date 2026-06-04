@@ -191,11 +191,14 @@ def main():
                     st.error("❌ Неверный пароль!")
         return
 
-    st.success("✅ Вы вошли как работник ЖБУ")
+    col, col0 = st.columns([2, 1])
+    with col:
+        st.success("✅ Вы вошли как работник ЖБУ")
     
-    if st.button("🚪 Выйти"):
-        st.session_state.authenticated = False
-        st.rerun()
+    with col0:
+        if st.button("🚪 Выйти"):
+            st.session_state.authenticated = False
+            st.rerun()
     
     st.header("📋 Электронные заявки студентов")
     
