@@ -314,7 +314,7 @@ def main():
                     st.info(f"📊 Найдено заявок: {len(filtered_dorm_df)} из {len(dorm_display)}")
                     
                     # Отображаем отфильтрованную таблицу
-                    st.dataframe(filtered_dorm_df, use_container_width=True)
+                    st.dataframe(filtered_dorm_df, use_container_width=True, hide_index=True)
                     
                     # Кнопка для сброса фильтров
                     if st.button(f"🔄 Сбросить фильтры", key=f"reset_{dorm}"):
