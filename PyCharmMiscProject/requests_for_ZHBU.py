@@ -254,15 +254,73 @@ def main():
             with st.expander(f"📋 {dorm}", expanded=False):
                 dorm_df = load_requests_by_dormitory(dorm)
                 if not dorm_df.empty:
+                    # Создаем DataFrame для отображения
                     dorm_display = dorm_df.rename(columns={
                         "id": "№", "date": "Дата", "time": "Время",
                         "fio": "ФИО студента", "email": "Email",
                         "room": "Комната", "type": "Тип заявки",
                         "description": "Описание", "status": "Статус"
                     })
-                    st.dataframe(dorm_display, use_container_width=True)
                     
-                    excel_data = to_excel(dorm_display)
+                    # Фильтры для каждого общежития
+                    st.markdown("**Фильтры:**")
+                    col1_f, col2_f, col3_f = st.columns(3)
+                    
+                    with col1_f:
+                        status_filter_dorm = st.selectbox(
+                            "Статус", 
+                            ["Все", "Новая", "В работе", "Выполнена"], 
+                            key=f"status_{dorm}"
+                        )
+                    
+                    with col2_f:
+                        date_options_dorm = ["Все", "Сегодня", "Вчера", "Выбрать дату"]
+                        date_filter_dorm = st.selectbox(
+                            "Период", 
+                            date_options_dorm, 
+                            key=f"date_{dorm}"
+                        )
+                    
+                    with col3_f:
+                        type_options_dorm = ["Все", "Сантехника", "Электрика", "Уборка", "Другое"]
+                        type_filter_dorm = st.selectbox(
+                            "Тип заявки", 
+                            type_options_dorm, 
+                            key=f"type_{dorm}"
+                        )
+                    
+                    # Применяем фильтры
+                    filtered_dorm_df = dorm_display.copy()
+                    
+                    # Фильтр по статусу
+                    if status_filter_dorm != "Все":
+                        filtered_dorm_df = filtered_dorm_df[filtered_dorm_df["Статус"] == status_filter_dorm]
+                    
+                    # Фильтр по типу
+                    if type_filter_dorm != "Все":
+                        filtered_dorm_df = filtered_dorm_df[filtered_dorm_df["Тип заявки"] == type_filter_dorm]
+                    
+                    # Фильтр по дате
+                    today = datetime.now().date()
+                    if date_filter_dorm == "Сегодня":
+                        filtered_dorm_df = filtered_dorm_df[filtered_dorm_df["Дата"] == today.strftime("%Y-%m-%d")]
+                    elif date_filter_dorm == "Вчера":
+                        yesterday = today - timedelta(days=1)
+                        filtered_dorm_df = filtered_dorm_df[filtered_dorm_df["Дата"] == yesterday.strftime("%Y-%m-%d")]
+                    elif date_filter_dorm == "Выбрать дату":
+                        selected_date_dorm = st.date_input("Выберите дату", value=today, key=f"date_picker_{dorm}")
+                        filtered_dorm_df = filtered_dorm_df[filtered_dorm_df["Дата"] == selected_date_dorm.strftime("%Y-%m-%d")]
+                    
+                    st.info(f"📊 Найдено заявок: {len(filtered_dorm_df)} из {len(dorm_display)}")
+                    
+                    # Отображаем отфильтрованную таблицу
+                    st.dataframe(filtered_dorm_df, use_container_width=True)
+                    
+                    # Кнопка для сброса фильтров
+                    if st.button(f"🔄 Сбросить фильтры", key=f"reset_{dorm}"):
+                        st.rerun()
+                    
+                    excel_data = to_excel(filtered_dorm_df)
                     st.download_button(
                         label=f"📊 Скачать в Excel формате",
                         data=excel_data,
