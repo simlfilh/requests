@@ -387,7 +387,7 @@ def main():
     if st.button("🔄 Обновить сейчас"):
         st.rerun()
 
-    st.dataframe(filtered_df, use_container_width=True)
+    st.dataframe(filtered_df, use_container_width=True, hide_index=True)
     
     st.markdown("---")
     st.subheader("✏️ Управление заявкой")
