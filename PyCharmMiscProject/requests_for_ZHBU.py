@@ -49,7 +49,6 @@ def load_requests_by_dormitory(dormitory):
         return pd.DataFrame()
 
 def delete_request(request_id):
-    """Удаление заявки по ID"""
     try:
         supabase = get_supabase()
         
