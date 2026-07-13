@@ -290,7 +290,7 @@ def main():
                         )
                     
                     with col3_f:
-                        type_options_dorm = ["Все", "Сантехника", "Электрика", "Уборка", "Другое"]
+                        type_options_dorm = ["Все", "Сантехника", "Электрика", "Плиты", "Уборка", "Другое"]
                         type_filter_dorm = st.selectbox(
                             "Тип заявки", 
                             type_options_dorm, 
@@ -349,7 +349,7 @@ def main():
         date_filter_type = st.selectbox("Период", date_options)
 
     with col3:
-        type_options = ["Все", "Сантехника", "Электрика", "Уборка", "Другое"]
+        type_options = ["Все", "Сантехника", "Электрика", "Плиты", "Уборка", "Другое"]
         type_filter = st.selectbox("Тип заявки", type_options)
 
     filtered_df = display_df.copy()
@@ -361,6 +361,7 @@ def main():
         type_map_filter = {
             "Сантехника": "Сантехника",
             "Электрика": "Электрика",
+            "Плиты": "Плиты",
             "Уборка": "Уборка",
             "Другое": "Другое"
         }
