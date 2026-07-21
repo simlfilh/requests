@@ -22,6 +22,7 @@ SMTP_PASSWORD = st.secrets["SMTP_PASSWORD"]
 PASSWORD = st.secrets["PASSWORD"] 
 
 
+# ===== ЕДИНЫЕ НАЗВАНИЯ ОБЩЕЖИТИЙ =====
 DORMITORIES = [
     "Общежитие №2 | Чкаловский пр-т, д. 27",
     "Общежитие №3 | пр-т Косыгина, д. 19, к. 2",
@@ -29,12 +30,12 @@ DORMITORIES = [
     "Общежитие №7 | ул. Воронежская, д. 38"
 ]
 
-# Альтернативные названия для поиска
-DORMITORY_ALIASES = {
-    "Общежитие №2 | Чкаловский пр-т, д. 27": ["№2", "2", "Чкаловский"],
-    "Общежитие №3 | пр-т Косыгина, д. 19, к. 2": ["№3", "3", "Косыгина"],
-    "Общежитие №4 | ул. Воронежская, д. 69": ["№4", "4", "Воронежская"],
-    "Общежитие №7 | ул. Воронежская, д. 38": ["№7", "7", "Воронежская"]
+# Короткие названия для кнопок
+DORMITORIES_SHORT = {
+    "Общежитие №2 | Чкаловский пр-т, д. 27": "№2",
+    "Общежитие №3 | пр-т Косыгина, д. 19, к. 2": "№3",
+    "Общежитие №4 | ул. Воронежская, д. 69": "№4",
+    "Общежитие №7 | ул. Воронежская, д. 38": "№7"
 }
 
 TYPES = ["Сантехника", "Электрика", "Плиты", "Уборка", "Другое"]
@@ -59,34 +60,11 @@ def load_requests():
 
 def load_requests_by_dormitory(dormitory):
     supabase = get_supabase()
-    
-    # Пробуем найти точное совпадение
     response = supabase.table('requests').select('*').eq('dormitory', dormitory).order('id', desc=False).execute()
-    
     if response.data:
         return pd.DataFrame(response.data)
     else:
-        # Если точного совпадения нет, пробуем частичное совпадение
-        # Получаем все заявки и фильтруем в Python
-        all_requests = supabase.table('requests').select('*').order('id', desc=False).execute()
-        if all_requests.data:
-            df = pd.DataFrame(all_requests.data)
-            # Ищем по частичному совпадению
-            dorm_short = dormitory.split('|')[0].strip()
-            filtered_df = df[df['dormitory'].str.contains(dorm_short, case=False, na=False)]
-            
-            # Если не нашли по короткому имени, пробуем по номеру
-            if filtered_df.empty:
-                # Извлекаем номер общежития
-                import re
-                match = re.search(r'№(\d+)', dormitory)
-                if match:
-                    dorm_num = match.group(1)
-                    filtered_df = df[df['dormitory'].str.contains(f'№{dorm_num}', case=False, na=False)]
-            
-            return filtered_df
-        else:
-            return pd.DataFrame()
+        return pd.DataFrame()
 
 def delete_request(request_id):
     try:
@@ -527,20 +505,13 @@ def main():
             st.session_state.authenticated = False
             st.rerun()
 
-    # Кнопки навигации
+    # Кнопки навигации - используем единые названия
     cols = st.columns(4)
-    dormitories_short = ["№2", "№3", "№4", "№7"]
-    dormitories_full = [
-        "Общежитие №2 | Чкаловский пр-т, д. 27",
-        "Общежитие №3 | пр-т Косыгина, д. 19, к. 2",
-        "Общежитие №4 | ул. Воронежская, д. 69",
-        "Общежитие №7 | ул. Воронежская, д. 38"
-    ]
-        
-    for i, (short, full) in enumerate(zip(dormitories_short, dormitories_full)):
+    for i, full_name in enumerate(DORMITORIES):
         with cols[i]:
-            if st.button(f"🏢 {short}", use_container_width=True, key=f"dorm_{i+2}"):
-                st.session_state.selected_dormitory = full
+            short_name = DORMITORIES_SHORT[full_name]
+            if st.button(f"🏢 {short_name}", use_container_width=True, key=f"dorm_{i+2}"):
+                st.session_state.selected_dormitory = full_name
                 st.session_state.show_stats = False
                 st.session_state.show_all_requests = False
                 st.rerun()
@@ -608,18 +579,6 @@ def main():
         else:
             # Для конкретного общежития показываем заявки с разделением по типам
             st.subheader(st.session_state.selected_dormitory)
-            
-            # Отладочная информация - показываем какие названия ищем
-            with st.expander("🔍 Отладка (показать названия общежитий в БД)"):
-                all_requests = load_requests()
-                if not all_requests.empty:
-                    unique_dorms = all_requests['dormitory'].unique()
-                    st.write("Названия общежитий в базе данных:")
-                    for dorm in unique_dorms:
-                        st.write(f"- {dorm}")
-                else:
-                    st.write("В базе данных нет заявок")
-            
             show_dormitory_requests_with_control(st.session_state.selected_dormitory)
 
 if __name__ == "__main__":
