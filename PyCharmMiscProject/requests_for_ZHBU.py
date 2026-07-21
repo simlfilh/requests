@@ -334,7 +334,7 @@ def main():
 
     # Кнопки навигации
     cols = st.columns(4)
-    dormitories_short = ["№2", "№3", "№4", "№7"]
+    dormitories_short = ["Общежитие №2 | Чкаловский пр-т, д. 27", "Общежитие №3 | пр-т Косыгина, д. 19, к. 2", "Общежитие №4 | ул. Воронежская, д. 69", "Общежитие №7 | ул. Воронежская, д. 38"]
     dormitories_full = [
         "Общежитие №2 | Чкаловский пр-т, д. 27",
         "Общежитие №3 | пр-т Косыгина, д. 19, к. 2",
@@ -387,7 +387,7 @@ def main():
             title = "Общая таблица всех заявок"
         else:
             df = load_requests_by_dormitory(st.session_state.selected_dormitory)
-            title = f"Заявки: {st.session_state.selected_dormitory}"
+            title = f"{st.session_state.selected_dormitory}"
         
         st.subheader(title)
 
