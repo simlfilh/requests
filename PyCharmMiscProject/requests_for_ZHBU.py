@@ -352,20 +352,15 @@ def show_dormitory_requests_with_control(dormitory):
         
         # ЛЕВЫЙ СТОЛБЕЦ: Выбрать все, Снять все, Удалить
         with col_left:
-            st.markdown("**Управление выбором**")
+            if st.button("✅ Выбрать все", use_container_width=True, key=f"select_all_{dormitory}_{category}"):
+                for i in range(len(display_cat_df)):
+                    st.session_state[checkbox_key][i] = True
+                st.rerun()
             
-            col_buttons = st.columns(2)
-            with col_buttons[0]:
-                if st.button("✅ Выбрать все", use_container_width=True, key=f"select_all_{dormitory}_{category}"):
-                    for i in range(len(display_cat_df)):
-                        st.session_state[checkbox_key][i] = True
-                    st.rerun()
-            
-            with col_buttons[1]:
-                if st.button("❌ Снять все", use_container_width=True, key=f"deselect_all_{dormitory}_{category}"):
-                    for i in range(len(display_cat_df)):
-                        st.session_state[checkbox_key][i] = False
-                    st.rerun()
+           if st.button("❌ Снять все", use_container_width=True, key=f"deselect_all_{dormitory}_{category}"):
+                for i in range(len(display_cat_df)):
+                    st.session_state[checkbox_key][i] = False
+                st.rerun()
             
             if selected_ids:
                 if st.button(f"🗑️ Удалить ({len(selected_ids)})", use_container_width=True, key=f"bulk_delete_{dormitory}_{category}", type="primary"):
@@ -374,36 +369,28 @@ def show_dormitory_requests_with_control(dormitory):
         
         # ПРАВЫЙ СТОЛБЕЦ: Выбор статуса, Изменить статус, Экспорт
         with col_right:
-            st.markdown("**Управление статусом**")
-            
-            if selected_ids:
-                st.success(f"✅ Выбрано: {len(selected_ids)}")
+            new_status_bulk = st.selectbox(
+                    "Новый статус", 
+                    ["Новая", "В работе", "Выполнена"], 
+                    key=f"bulk_status_{dormitory}_{category}",
+                    label_visibility="collapsed"
+                )
                 
-                col_status = st.columns([2, 1])
-                with col_status[0]:
-                    new_status_bulk = st.selectbox(
-                        "Новый статус", 
-                        ["Новая", "В работе", "Выполнена"], 
-                        key=f"bulk_status_{dormitory}_{category}",
-                        label_visibility="collapsed"
-                    )
-                
-                with col_status[1]:
-                    if st.button(f"🔄 Изменить", use_container_width=True, key=f"bulk_update_{dormitory}_{category}"):
-                        success_count = 0
-                        for id in selected_ids:
-                            if update_status_with_notification(id, new_status_bulk):
-                                success_count += 1
-                        if success_count > 0:
-                            st.success(f"✅ Статус изменен для {success_count} заявок")
-                            for i in range(len(display_cat_df)):
-                                st.session_state[checkbox_key][i] = False
-                            time.sleep(1)
-                            st.rerun()
-                        else:
-                            st.error("❌ Ошибка при обновлении статусов")
-            else:
-                st.info("ℹ️ Выберите заявки для изменения статуса")
+            if st.button(f"🔄 Изменить", use_container_width=True, key=f"bulk_update_{dormitory}_{category}"):
+                    success_count = 0
+                    for id in selected_ids:
+                        if update_status_with_notification(id, new_status_bulk):
+                            success_count += 1
+                    if success_count > 0:
+                        st.success(f"✅ Статус изменен для {success_count} заявок")
+                        for i in range(len(display_cat_df)):
+                            st.session_state[checkbox_key][i] = False
+                        time.sleep(1)
+                        st.rerun()
+                    else:
+                        st.error("❌ Ошибка при обновлении статусов")
+        else:
+            st.info("ℹ️ Выберите заявки для изменения статуса")
             
             # Экспорт
             excel_data = to_excel(cat_df)
