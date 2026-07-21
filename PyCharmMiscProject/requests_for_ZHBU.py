@@ -437,8 +437,6 @@ def main():
             selected_date = st.date_input("Выберите дату", value=today)
             filtered_df = filtered_df[filtered_df["Дата"] == selected_date.strftime("%Y-%m-%d")]
 
-        st.info(f"📊 Найдено заявок: {len(filtered_df)} из {len(display_df)}")
-
         # Метрики
         col1, col2, col3, col4 = st.columns(4)
         with col1:
