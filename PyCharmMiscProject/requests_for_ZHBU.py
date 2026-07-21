@@ -472,21 +472,33 @@ def show_dormitory_requests_with_control(dormitory):
         # Показываем количество заявок данного типа
         st.caption(f"Всего: {len(cat_df)} заявок")
         
-        # Добавляем колонку для выбора
-        edit_df = cat_df.copy()
-        edit_df.insert(0, "Выбрать", False)
+        # ---------- РАБОТА С ЧЕКБОКСАМИ ЧЕРЕЗ SESSION_STATE ----------
+        # Создаем ключ для хранения состояния чекбоксов
+        checkbox_key = f"checkboxes_{dormitory}_{category}"
         
-        # ---------- ВЫБИРАЕМ ТОЛЬКО НУЖНЫЕ КОЛОНКИ ДЛЯ ОТОБРАЖЕНИЯ ----------
-        # Скрываем: ID, Время, Email
-        # Оставляем: Выбрать, Дата, ФИО студента, Общежитие, Комната, Тип заявки, Описание, Статус
+        # Инициализируем состояние чекбоксов, если его нет
+        if checkbox_key not in st.session_state:
+            st.session_state[checkbox_key] = {str(idx): False for idx in cat_df.index}
+        
+        # Создаем копию DataFrame для отображения с чекбоксами
+        display_cat_df = cat_df.copy()
+        
+        # Добавляем колонку с чекбоксами
+        checkbox_values = []
+        for idx in display_cat_df.index:
+            checkbox_values.append(st.session_state[checkbox_key].get(str(idx), False))
+        
+        display_cat_df.insert(0, "Выбрать", checkbox_values)
+        
+        # Выбираем только нужные колонки для отображения
         columns_to_show = ["Выбрать", "Дата", "ФИО студента", "Общежитие", "Комната", "Тип заявки", "Описание", "Статус"]
-        display_columns = [col for col in columns_to_show if col in edit_df.columns]
-        edit_df_display = edit_df[display_columns]
+        display_columns = [col for col in columns_to_show if col in display_cat_df.columns]
+        edit_df_display = display_cat_df[display_columns]
         
         # Уникальный ключ для data_editor
         editor_key = f"data_editor_{dormitory}_{category}"
         
-        # Отображаем редактируемую таблицу только с нужными колонками
+        # Отображаем редактируемую таблицу
         edited_df = st.data_editor(
             edit_df_display,
             use_container_width=True,
@@ -494,7 +506,7 @@ def show_dormitory_requests_with_control(dormitory):
             column_config={
                 "Выбрать": st.column_config.CheckboxColumn(
                     "Выбрать",
-                    help="Отметьте заявки для редактирования",
+                    help="Отметьте заявки для массового управления",
                     default=False,
                 ),
                 "Статус": st.column_config.TextColumn(
@@ -518,32 +530,38 @@ def show_dormitory_requests_with_control(dormitory):
             key=editor_key
         )
         
-        # Получаем выбранные ID (используем оригинальный df с ID)
-        # Нам нужно сопоставить выбранные строки с ID из оригинального DataFrame
-        selected_indices = edited_df[edited_df["Выбрать"] == True].index
-        if len(selected_indices) > 0:
-            # Получаем ID из оригинального df по индексам
-            selected_ids = edit_df.loc[selected_indices, "ID"].tolist()
-        else:
-            selected_ids = []
+        # Обновляем состояние чекбоксов из отредактированной таблицы
+        for idx in edited_df.index:
+            st.session_state[checkbox_key][str(idx)] = edited_df.loc[idx, "Выбрать"]
+        
+        # Получаем выбранные ID
+        selected_ids = []
+        for idx in edited_df.index:
+            if edited_df.loc[idx, "Выбрать"]:
+                # Получаем ID из оригинального DataFrame
+                original_idx = display_cat_df.index[idx]
+                selected_ids.append(display_cat_df.loc[original_idx, "ID"])
+        
+        # Кнопки управления
+        col_buttons = st.columns(3)
+        
+        with col_buttons[0]:
+            if st.button("✅ Выбрать все", use_container_width=True, key=f"select_all_{dormitory}_{category}"):
+                # Устанавливаем все чекбоксы в True
+                for idx in display_cat_df.index:
+                    st.session_state[checkbox_key][str(idx)] = True
+                st.rerun()
+            
+            if st.button("❌ Снять все", use_container_width=True, key=f"deselect_all_{dormitory}_{category}"):
+                # Устанавливаем все чекбоксы в False
+                for idx in display_cat_df.index:
+                    st.session_state[checkbox_key][str(idx)] = False
+                st.rerun()
         
         if selected_ids:
             st.success(f"✅ Выбрано заявок: {len(selected_ids)}")
             
-            col1, col2, col3 = st.columns(3)
-            
-            with col1:
-                if st.button("✅ Выбрать все", use_container_width=True, key=f"select_all_{dormitory}_{category}"):
-                    for idx in edit_df.index:
-                        st.session_state[f"{editor_key}_{idx}"] = True
-                    st.rerun()
-                
-                if st.button("❌ Снять все", use_container_width=True, key=f"deselect_all_{dormitory}_{category}"):
-                    for idx in edit_df.index:
-                        st.session_state[f"{editor_key}_{idx}"] = False
-                    st.rerun()
-            
-            with col2:
+            with col_buttons[1]:
                 new_status_bulk = st.selectbox(
                     "Новый статус", 
                     ["Новая", "В работе", "Выполнена"], 
@@ -556,12 +574,15 @@ def show_dormitory_requests_with_control(dormitory):
                             success_count += 1
                     if success_count > 0:
                         st.success(f"✅ Статус изменен для {success_count} заявок")
+                        # Сбрасываем чекбоксы после успешного обновления
+                        for idx in display_cat_df.index:
+                            st.session_state[checkbox_key][str(idx)] = False
                         time.sleep(1)
                         st.rerun()
                     else:
                         st.error("❌ Ошибка при обновлении статусов")
             
-            with col3:
+            with col_buttons[2]:
                 if st.button(f"🗑️ Удалить ({len(selected_ids)})", use_container_width=True, key=f"bulk_delete_{dormitory}_{category}", type="primary"):
                     st.session_state[f"show_bulk_delete_confirm_{dormitory}_{category}"] = True
                     st.session_state[f"bulk_delete_ids_{dormitory}_{category}"] = selected_ids
@@ -581,6 +602,9 @@ def show_dormitory_requests_with_control(dormitory):
                                     success_count += 1
                             if success_count > 0:
                                 st.success(f"✅ Удалено {success_count} заявок")
+                                # Сбрасываем чекбоксы после успешного удаления
+                                for idx in display_cat_df.index:
+                                    st.session_state[checkbox_key][str(idx)] = False
                                 st.session_state[confirm_key] = False
                                 st.session_state[f"bulk_delete_ids_{dormitory}_{category}"] = []
                                 time.sleep(1)
@@ -593,9 +617,9 @@ def show_dormitory_requests_with_control(dormitory):
                             st.session_state[f"bulk_delete_ids_{dormitory}_{category}"] = []
                             st.rerun()
         else:
-            st.info("ℹ️ Отметьте заявки в колонке 'Выбрать' для редактирования")
+            st.info("ℹ️ Отметьте заявки в колонке 'Выбрать' для массового управления")
         
-        # Экспорт для данного типа (экспортируем все данные, включая скрытые колонки)
+        # Экспорт для данного типа
         excel_data = to_excel(cat_df)
         st.download_button(
             label=f"📊 Скачать {category} в Excel",
