@@ -158,29 +158,6 @@ def to_excel(df):
         df.to_excel(writer, index=False, sheet_name='Заявки')
     return output.getvalue()
 
-def filter_by_date_range(df, date_column, date_filter_type, start_date=None, end_date=None):
-    """Функция для фильтрации по дате с поддержкой диапазона"""
-    today = datetime.now().date()
-    
-    if date_filter_type == "Сегодня":
-        return df[df[date_column] == today.strftime("%Y-%m-%d")]
-    elif date_filter_type == "Вчера":
-        yesterday = today - timedelta(days=1)
-        return df[df[date_column] == yesterday.strftime("%Y-%m-%d")]
-    elif date_filter_type == "За 7 дней":
-        start = today - timedelta(days=7)
-        df[date_column] = pd.to_datetime(df[date_column])
-        return df[(df[date_column] >= pd.Timestamp(start)) & (df[date_column] <= pd.Timestamp(today))]
-    elif date_filter_type == "За 30 дней":
-        start = today - timedelta(days=30)
-        df[date_column] = pd.to_datetime(df[date_column])
-        return df[(df[date_column] >= pd.Timestamp(start)) & (df[date_column] <= pd.Timestamp(today))]
-    elif date_filter_type == "Выбрать период":
-        if start_date and end_date:
-            df[date_column] = pd.to_datetime(df[date_column])
-            return df[(df[date_column] >= pd.Timestamp(start_date)) & (df[date_column] <= pd.Timestamp(end_date))]
-    return df
-
 def show_statistics():
     """Функция для отображения статистики"""
     st.header("📊 Статистика по общежитиям")
@@ -234,7 +211,7 @@ def show_all_requests():
         with col2:
             dorm_filter_all = st.selectbox("Общежитие", ["Все"] + [d.split('|')[0].strip() for d in DORMITORIES], key="dorm_all_filter")
         with col3:
-            date_options_all = ["Все", "Сегодня", "Вчера", "За 7 дней", "За 30 дней", "Выбрать период"]
+            date_options_all = ["Все", "Сегодня", "Вчера", "Выбрать дату", "Выбрать период"]
             date_filter_all = st.selectbox("Период", date_options_all, key="date_all_filter")
         
         # Применяем фильтры
@@ -246,16 +223,25 @@ def show_all_requests():
         if dorm_filter_all != "Все":
             filtered_all_df = filtered_all_df[filtered_all_df["Общежитие"].str.contains(dorm_filter_all)]
         
-        # Фильтр по дате с диапазоном
-        if date_filter_all == "Выбрать период":
+        today = datetime.now().date()
+        
+        # Фильтр по дате
+        if date_filter_all == "Сегодня":
+            filtered_all_df = filtered_all_df[filtered_all_df["Дата"] == today.strftime("%Y-%m-%d")]
+        elif date_filter_all == "Вчера":
+            yesterday = today - timedelta(days=1)
+            filtered_all_df = filtered_all_df[filtered_all_df["Дата"] == yesterday.strftime("%Y-%m-%d")]
+        elif date_filter_all == "Выбрать дату":
+            selected_date = st.date_input("Выберите дату", value=today, key="date_picker_all")
+            filtered_all_df = filtered_all_df[filtered_all_df["Дата"] == selected_date.strftime("%Y-%m-%d")]
+        elif date_filter_all == "Выбрать период":
             col1, col2 = st.columns(2)
             with col1:
-                start_date = st.date_input("Начальная дата", value=datetime.now().date() - timedelta(days=7), key="start_date_all")
+                start_date = st.date_input("Начальная дата", value=today - timedelta(days=7), key="start_date_all")
             with col2:
-                end_date = st.date_input("Конечная дата", value=datetime.now().date(), key="end_date_all")
-            filtered_all_df = filter_by_date_range(filtered_all_df, "Дата", date_filter_all, start_date, end_date)
-        else:
-            filtered_all_df = filter_by_date_range(filtered_all_df, "Дата", date_filter_all)
+                end_date = st.date_input("Конечная дата", value=today, key="end_date_all")
+            filtered_all_df["Дата"] = pd.to_datetime(filtered_all_df["Дата"])
+            filtered_all_df = filtered_all_df[(filtered_all_df["Дата"] >= pd.Timestamp(start_date)) & (filtered_all_df["Дата"] <= pd.Timestamp(end_date))]
         
         # Показываем метрики
         col1, col2, col3, col4 = st.columns(4)
@@ -319,7 +305,7 @@ def show_dormitory_requests_by_type(dormitory):
     with col1:
         status_filter = st.selectbox("Статус", ["Все", "Новая", "В работе", "Выполнена"], key="status_dorm")
     with col2:
-        date_options = ["Все", "Сегодня", "Вчера", "За 7 дней", "За 30 дней", "Выбрать период"]
+        date_options = ["Все", "Сегодня", "Вчера", "Выбрать дату", "Выбрать период"]
         date_filter = st.selectbox("Период", date_options, key="date_dorm")
     
     # Применяем фильтры
@@ -328,16 +314,25 @@ def show_dormitory_requests_by_type(dormitory):
     if status_filter != "Все":
         filtered_df = filtered_df[filtered_df["status"] == status_filter]
     
-    # Фильтр по дате с диапазоном
-    if date_filter == "Выбрать период":
+    today = datetime.now().date()
+    
+    # Фильтр по дате
+    if date_filter == "Сегодня":
+        filtered_df = filtered_df[filtered_df["date"] == today.strftime("%Y-%m-%d")]
+    elif date_filter == "Вчера":
+        yesterday = today - timedelta(days=1)
+        filtered_df = filtered_df[filtered_df["date"] == yesterday.strftime("%Y-%m-%d")]
+    elif date_filter == "Выбрать дату":
+        selected_date = st.date_input("Выберите дату", value=today, key="date_picker_dorm")
+        filtered_df = filtered_df[filtered_df["date"] == selected_date.strftime("%Y-%m-%d")]
+    elif date_filter == "Выбрать период":
         col1, col2 = st.columns(2)
         with col1:
-            start_date = st.date_input("Начальная дата", value=datetime.now().date() - timedelta(days=7), key="start_date_dorm")
+            start_date = st.date_input("Начальная дата", value=today - timedelta(days=7), key="start_date_dorm")
         with col2:
-            end_date = st.date_input("Конечная дата", value=datetime.now().date(), key="end_date_dorm")
-        filtered_df = filter_by_date_range(filtered_df, "date", date_filter, start_date, end_date)
-    else:
-        filtered_df = filter_by_date_range(filtered_df, "date", date_filter)
+            end_date = st.date_input("Конечная дата", value=today, key="end_date_dorm")
+        filtered_df["date"] = pd.to_datetime(filtered_df["date"])
+        filtered_df = filtered_df[(filtered_df["date"] >= pd.Timestamp(start_date)) & (filtered_df["date"] <= pd.Timestamp(end_date))]
     
     # Список типов заявок с иконками
     types_with_icons = {
@@ -512,7 +507,7 @@ def main():
             with col1:
                 status_filter = st.selectbox("Статус", ["Все", "Новая", "В работе", "Выполнена"])
             with col2:
-                date_options = ["Все", "Сегодня", "Вчера", "За 7 дней", "За 30 дней", "Выбрать период"]
+                date_options = ["Все", "Сегодня", "Вчера", "Выбрать дату", "Выбрать период"]
                 date_filter_type = st.selectbox("Период", date_options)
 
             filtered_df = display_df.copy()
@@ -520,16 +515,25 @@ def main():
             if status_filter != "Все":
                 filtered_df = filtered_df[filtered_df["Статус"] == status_filter]
             
-            # Фильтр по дате с диапазоном
-            if date_filter_type == "Выбрать период":
+            today = datetime.now().date()
+            
+            # Фильтр по дате
+            if date_filter_type == "Сегодня":
+                filtered_df = filtered_df[filtered_df["Дата"] == today.strftime("%Y-%m-%d")]
+            elif date_filter_type == "Вчера":
+                yesterday = today - timedelta(days=1)
+                filtered_df = filtered_df[filtered_df["Дата"] == yesterday.strftime("%Y-%m-%d")]
+            elif date_filter_type == "Выбрать дату":
+                selected_date = st.date_input("Выберите дату", value=today)
+                filtered_df = filtered_df[filtered_df["Дата"] == selected_date.strftime("%Y-%m-%d")]
+            elif date_filter_type == "Выбрать период":
                 col1, col2 = st.columns(2)
                 with col1:
-                    start_date = st.date_input("Начальная дата", value=datetime.now().date() - timedelta(days=7))
+                    start_date = st.date_input("Начальная дата", value=today - timedelta(days=7))
                 with col2:
-                    end_date = st.date_input("Конечная дата", value=datetime.now().date())
-                filtered_df = filter_by_date_range(filtered_df, "Дата", date_filter_type, start_date, end_date)
-            else:
-                filtered_df = filter_by_date_range(filtered_df, "Дата", date_filter_type)
+                    end_date = st.date_input("Конечная дата", value=today)
+                filtered_df["Дата"] = pd.to_datetime(filtered_df["Дата"])
+                filtered_df = filtered_df[(filtered_df["Дата"] >= pd.Timestamp(start_date)) & (filtered_df["Дата"] <= pd.Timestamp(end_date))]
 
             st.info(f"📊 Найдено заявок: {len(filtered_df)} из {len(display_df)}")
 
