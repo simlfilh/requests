@@ -397,7 +397,6 @@ def show_dormitory_requests_with_control(dormitory):
                 st.write("")
                 st.write("")
                 st.write("")
-                st.write("")
                 if st.button(f"🗑️ Удалить", use_container_width=True, key=f"bulk_delete_{dormitory}_{category}", type="primary"):
                     st.session_state[f"show_bulk_delete_confirm_{dormitory}_{category}"] = True
                     st.session_state[f"bulk_delete_ids_{dormitory}_{category}"] = selected_ids
