@@ -60,11 +60,24 @@ def load_requests():
 
 def load_requests_by_dormitory(dormitory):
     supabase = get_supabase()
-    response = supabase.table('requests').select('*').eq('dormitory', dormitory).order('id', desc=False).execute()
-    if response.data:
-        return pd.DataFrame(response.data)
-    else:
+    
+    # Получаем все заявки
+    response = supabase.table('requests').select('*').order('id', desc=False).execute()
+    if not response.data:
         return pd.DataFrame()
+    
+    df = pd.DataFrame(response.data)
+    
+    # Извлекаем номер общежития из запроса (например, "2" из "Общежитие №2 | ...")
+    import re
+    match = re.search(r'№(\d+)', dormitory)
+    if match:
+        dorm_num = match.group(1)
+        # Ищем заявки, где в названии есть этот номер
+        filtered_df = df[df['dormitory'].str.contains(dorm_num, na=False)]
+        return filtered_df
+    
+    return pd.DataFrame()
 
 def delete_request(request_id):
     try:
