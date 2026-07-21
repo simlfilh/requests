@@ -217,6 +217,12 @@ def main():
             if st.button(f"🏢 {short}", use_container_width=True):
                 st.session_state.selected_dormitory = full
                 st.rerun()
+
+    col_full = st.columns(1)[0]
+    with col_full:
+        if st.button("📋 Все заявки", use_container_width=True, key="dorm_all"):
+            st.session_state.selected_dormitory = "Все"
+            st.rerun()
                     
     st.divider()
 
