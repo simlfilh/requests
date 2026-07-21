@@ -369,7 +369,7 @@ def show_dormitory_requests_with_control(dormitory):
             st.success(f"✅ Выбрано заявок: {len(selected_ids)}")
             
             # Создаем 4 колонки для компактного расположения
-            col1, col2 = st.columns([2)
+            col1, col2 = st.columns(2)
             
             with col1:
                 new_status_bulk = st.selectbox(
