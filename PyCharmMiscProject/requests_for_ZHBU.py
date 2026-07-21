@@ -476,12 +476,19 @@ def show_dormitory_requests_with_control(dormitory):
         edit_df = cat_df.copy()
         edit_df.insert(0, "Выбрать", False)
         
+        # ---------- ВЫБИРАЕМ ТОЛЬКО НУЖНЫЕ КОЛОНКИ ДЛЯ ОТОБРАЖЕНИЯ ----------
+        # Скрываем: ID, Время, Email
+        # Оставляем: Выбрать, Дата, ФИО студента, Общежитие, Комната, Тип заявки, Описание, Статус
+        columns_to_show = ["Выбрать", "Дата", "ФИО студента", "Общежитие", "Комната", "Тип заявки", "Описание", "Статус"]
+        display_columns = [col for col in columns_to_show if col in edit_df.columns]
+        edit_df_display = edit_df[display_columns]
+        
         # Уникальный ключ для data_editor
         editor_key = f"data_editor_{dormitory}_{category}"
         
-        # Отображаем редактируемую таблицу
+        # Отображаем редактируемую таблицу только с нужными колонками
         edited_df = st.data_editor(
-            edit_df,
+            edit_df_display,
             use_container_width=True,
             hide_index=True,
             column_config={
@@ -490,22 +497,35 @@ def show_dormitory_requests_with_control(dormitory):
                     help="Отметьте заявки для массового управления",
                     default=False,
                 ),
-                "ID": st.column_config.NumberColumn(
-                    "№",
-                    help="Номер заявки",
-                    width="small",
-                ),
                 "Статус": st.column_config.TextColumn(
                     "Статус",
                     width="small",
                 ),
+                "Дата": st.column_config.TextColumn(
+                    "Дата",
+                    width="small",
+                ),
+                "Комната": st.column_config.TextColumn(
+                    "Комната",
+                    width="small",
+                ),
+                "Тип заявки": st.column_config.TextColumn(
+                    "Тип заявки",
+                    width="medium",
+                ),
             },
-            disabled=["ID", "Дата", "Время", "ФИО студента", "Email", "Общежитие", "Комната", "Тип заявки", "Описание", "Статус"],
+            disabled=["Дата", "ФИО студента", "Общежитие", "Комната", "Тип заявки", "Описание", "Статус"],
             key=editor_key
         )
         
-        # Получаем выбранные ID
-        selected_ids = edited_df[edited_df["Выбрать"] == True]["ID"].tolist()
+        # Получаем выбранные ID (используем оригинальный df с ID)
+        # Нам нужно сопоставить выбранные строки с ID из оригинального DataFrame
+        selected_indices = edited_df[edited_df["Выбрать"] == True].index
+        if len(selected_indices) > 0:
+            # Получаем ID из оригинального df по индексам
+            selected_ids = edit_df.loc[selected_indices, "ID"].tolist()
+        else:
+            selected_ids = []
         
         if selected_ids:
             st.success(f"✅ Выбрано заявок: {len(selected_ids)}")
@@ -575,7 +595,7 @@ def show_dormitory_requests_with_control(dormitory):
         else:
             st.info("ℹ️ Отметьте заявки в колонке 'Выбрать' для массового управления")
         
-        # Экспорт для данного типа
+        # Экспорт для данного типа (экспортируем все данные, включая скрытые колонки)
         excel_data = to_excel(cat_df)
         st.download_button(
             label=f"📊 Скачать {category} в Excel",
@@ -587,6 +607,7 @@ def show_dormitory_requests_with_control(dormitory):
         )
         
         st.markdown("---")  # Разделитель между типами
+        
 def main():
     # Инициализация session_state
     if "authenticated" not in st.session_state:
