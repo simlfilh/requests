@@ -172,7 +172,7 @@ def to_excel(df):
 
 
 def main():
-    col1, col10 = st.columns([3,1])
+    col1, col2 = st.columns([4, 2])
     with col1:
         st.title("🔐 Панель сотрудника ЖБУ | Управление электронными заявками")
     
@@ -197,7 +197,7 @@ def main():
                     else:
                         st.error("❌ Неверный пароль!")
             return
-    with col10:
+    with col2:
         if st.button("🚪 Выйти"):
             st.session_state.authenticated = False
             st.rerun()
