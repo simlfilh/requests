@@ -172,6 +172,9 @@ def to_excel(df):
 
 
 def main():
+    if "show_all_requests" not in st.session_state:
+        st.session_state.show_all_requests = False
+    
     col1, col2 = st.columns([6, 1])
     with col1:
         st.title("🔐 Панель сотрудника ЖБУ | Управление электронными заявками")
