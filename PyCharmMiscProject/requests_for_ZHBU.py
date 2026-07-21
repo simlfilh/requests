@@ -195,8 +195,11 @@ def show_all_requests_with_control():
         return
     
     display_df_all = df_all.rename(columns={
+        "id": "ID",
         "date": "Дата",
+        "time": "Время",
         "fio": "ФИО студента",
+        "email": "Email",
         "dormitory": "Общежитие",  
         "room": "Комната",
         "type": "Тип заявки",
