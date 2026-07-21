@@ -187,7 +187,7 @@ def show_statistics():
 
 def show_all_requests():
     """Функция для отображения всех заявок"""
-    st.header("📋 Электронные заявки студентов")
+    st.header("📋 Все заявки студентов")
         
     df_all = load_requests()
     if not df_all.empty:
@@ -276,23 +276,47 @@ def show_dormitory_requests_by_type(dormitory):
         st.info(f"Нет заявок для {dormitory}")
         return
     
+    # Фильтры для общежития
+    st.subheader("🔍 Фильтры")
+    col1, col2 = st.columns(2)
+    with col1:
+        status_filter = st.selectbox("Статус", ["Все", "Новая", "В работе", "Выполнена"], key="status_dorm")
+    with col2:
+        date_options = ["Все", "Сегодня", "Вчера", "Выбрать дату"]
+        date_filter = st.selectbox("Период", date_options, key="date_dorm")
+    
+    # Применяем фильтры
+    filtered_df = df.copy()
+    
+    if status_filter != "Все":
+        filtered_df = filtered_df[filtered_df["status"] == status_filter]
+    
+    today = datetime.now().date()
+    if date_filter == "Сегодня":
+        filtered_df = filtered_df[filtered_df["date"] == today.strftime("%Y-%m-%d")]
+    elif date_filter == "Вчера":
+        yesterday = today - timedelta(days=1)
+        filtered_df = filtered_df[filtered_df["date"] == yesterday.strftime("%Y-%m-%d")]
+    elif date_filter == "Выбрать дату":
+        selected_date = st.date_input("Выберите дату", value=today, key="date_picker_dorm")
+        filtered_df = filtered_df[filtered_df["date"] == selected_date.strftime("%Y-%m-%d")]
+    
     # Список типов заявок
     types = ["Сантехника", "Электрика", "Плиты", "Уборка", "Другое"]
     
-    # Создаем вкладки для каждого типа
-    tabs = st.tabs([f"{t}" for t in types])
-    
-    for tab, type_name in zip(tabs, types):
-        with tab:
-            # Фильтруем по типу
-            filtered_df = df[df["type"] == type_name]
-            
-            if filtered_df.empty:
+    # Показываем все таблицы на одной странице
+    for type_name in types:
+        # Фильтруем по типу
+        type_df = filtered_df[filtered_df["type"] == type_name]
+        
+        # Создаем expander для каждого типа
+        with st.expander(f"🔧 {type_name} ({len(type_df)} заявок)", expanded=False):
+            if type_df.empty:
                 st.info(f"Нет заявок типа '{type_name}'")
                 continue
             
             # Переименовываем колонки
-            display_df = filtered_df.rename(columns={
+            display_df = type_df.rename(columns={
                 "id": "ID",
                 "date": "Дата",
                 "time": "Время",
@@ -435,7 +459,7 @@ def main():
                 "status": "Статус"
             })
 
-            # Фильтры (без типа)
+            # Фильтры
             col1, col2 = st.columns(2)
             with col1:
                 status_filter = st.selectbox("Статус", ["Все", "Новая", "В работе", "Выполнена"])
@@ -562,7 +586,7 @@ def main():
             )
         
         else:
-            # Для конкретного общежития показываем вкладки по типам
+            # Для конкретного общежития показываем все типы на одной странице
             st.subheader(st.session_state.selected_dormitory)
             show_dormitory_requests_by_type(st.session_state.selected_dormitory)
 
