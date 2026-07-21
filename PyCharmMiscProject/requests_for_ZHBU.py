@@ -535,8 +535,6 @@ def main():
                 filtered_df["Дата"] = pd.to_datetime(filtered_df["Дата"])
                 filtered_df = filtered_df[(filtered_df["Дата"] >= pd.Timestamp(start_date)) & (filtered_df["Дата"] <= pd.Timestamp(end_date))]
 
-            st.info(f"📊 Найдено заявок: {len(filtered_df)} из {len(display_df)}")
-
             # Метрики
             col1, col2, col3, col4 = st.columns(4)
             with col1:
