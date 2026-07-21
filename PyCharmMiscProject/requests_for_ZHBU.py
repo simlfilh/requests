@@ -293,13 +293,13 @@ def show_dormitory_requests_by_type(dormitory):
     
     today = datetime.now().date()
     if date_filter == "Сегодня":
-        filtered_df = filtered_df[filtered_df["date"] == today.strftime("%Y-%m-%d")]
+        filtered_df = filtered_df[filtered_df["date"] == today.strftime("%d-%m-%Y")]
     elif date_filter == "Вчера":
         yesterday = today - timedelta(days=1)
-        filtered_df = filtered_df[filtered_df["date"] == yesterday.strftime("%Y-%m-%d")]
+        filtered_df = filtered_df[filtered_df["date"] == yesterday.strftime("%%d-%m-%Y")]
     elif date_filter == "Выбрать дату":
         selected_date = st.date_input("Выберите дату", value=today, key="date_picker_dorm")
-        filtered_df = filtered_df[filtered_df["date"] == selected_date.strftime("%Y-%m-%d")]
+        filtered_df = filtered_df[filtered_df["date"] == selected_date.strftime("%%d-%m-%Y")]
     
     # Список типов заявок с иконками
     types_with_icons = {
