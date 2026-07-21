@@ -364,23 +364,26 @@ def show_dormitory_requests_with_control(dormitory):
                     st.session_state[checkbox_key][i] = False
                 st.rerun()
         
-        # ---------- ВТОРАЯ СТРОКА: Выбор статуса и кнопка "Изменить статус" ----------
+        # ---------- ВТОРАЯ СТРОКА: Выбор статуса, кнопка "Изменить статус" и "Удалить" ----------
         if selected_ids:
             st.success(f"✅ Выбрано заявок: {len(selected_ids)}")
             
-            # Создаем 2 колонки для выбора статуса и кнопки изменения
-            col_buttons_row2 = st.columns([2, 1])
+            # Создаем 4 колонки для компактного расположения
+            col1, col2, col3, col4 = st.columns([1.5, 1, 1, 1])
             
-            with col_buttons_row2[0]:
+            with col1:
                 new_status_bulk = st.selectbox(
                     "Новый статус", 
                     ["Новая", "В работе", "Выполнена"], 
-                    key=f"bulk_status_{dormitory}_{category}"
+                    key=f"bulk_status_{dormitory}_{category}",
+                    label_visibility="collapsed"  # Скрываем label
                 )
+                # Добавляем маленькую подпись под селектом
+                st.caption("Новый статус")
             
-            with col_buttons_row2[1]:
+            with col2:
                 st.write("")  # Отступ для выравнивания
-                if st.button(f"🔄 Изменить статус ({len(selected_ids)})", use_container_width=True, key=f"bulk_update_{dormitory}_{category}"):
+                if st.button(f"🔄 Изменить статус", use_container_width=True, key=f"bulk_update_{dormitory}_{category}"):
                     success_count = 0
                     for id in selected_ids:
                         if update_status_with_notification(id, new_status_bulk):
@@ -395,10 +398,14 @@ def show_dormitory_requests_with_control(dormitory):
                     else:
                         st.error("❌ Ошибка при обновлении статусов")
             
-            # ---------- ТРЕТЬЯ СТРОКА: Кнопка "Удалить" ----------
-            if st.button(f"🗑️ Удалить ({len(selected_ids)})", use_container_width=True, key=f"bulk_delete_{dormitory}_{category}", type="primary"):
-                st.session_state[f"show_bulk_delete_confirm_{dormitory}_{category}"] = True
-                st.session_state[f"bulk_delete_ids_{dormitory}_{category}"] = selected_ids
+            with col3:
+                st.write("")  # Отступ для выравнивания
+                if st.button(f"🗑️ Удалить", use_container_width=True, key=f"bulk_delete_{dormitory}_{category}", type="primary"):
+                    st.session_state[f"show_bulk_delete_confirm_{dormitory}_{category}"] = True
+                    st.session_state[f"bulk_delete_ids_{dormitory}_{category}"] = selected_ids
+            
+            with col4:
+                st.write("")  # Пустая колонка для отступа
             
             # Диалог подтверждения массового удаления
             confirm_key = f"show_bulk_delete_confirm_{dormitory}_{category}"
