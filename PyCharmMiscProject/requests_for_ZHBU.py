@@ -357,7 +357,7 @@ def show_dormitory_requests_with_control(dormitory):
                     st.session_state[checkbox_key][i] = True
                 st.rerun()
             
-           if st.button("❌ Снять все", use_container_width=True, key=f"deselect_all_{dormitory}_{category}"):
+            if st.button("❌ Снять все", use_container_width=True, key=f"deselect_all_{dormitory}_{category}"):
                 for i in range(len(display_cat_df)):
                     st.session_state[checkbox_key][i] = False
                 st.rerun()
