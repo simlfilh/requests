@@ -434,6 +434,21 @@ def show_dormitory_requests_with_control(dormitory):
         "status": "Статус"
     })
     
+    # ---------- ОТЛАДКА: Показываем все типы из базы ----------
+    st.warning("🔍 ОТЛАДКА: Реальные типы заявок в базе данных")
+    if not display_df.empty:
+        unique_types = display_df["Тип заявки"].unique().tolist()
+        st.write(f"**Найденные типы:** {unique_types}")
+        st.write(f"**Всего заявок:** {len(display_df)}")
+        
+        # Показываем примеры заявок с их типами
+        st.write("**Примеры заявок с типами:**")
+        sample_df = display_df[["ID", "Тип заявки", "Статус"]].head(10)
+        st.dataframe(sample_df, use_container_width=True, hide_index=True)
+    else:
+        st.write("Нет заявок для отображения")
+    st.markdown("---")
+    
     # ---------- Метрики ----------
     col1, col2, col3, col4 = st.columns(4)
     with col1:
@@ -448,22 +463,36 @@ def show_dormitory_requests_with_control(dormitory):
     st.markdown("---")
     
     # ---------- Словарь соответствия типов ----------
+    # ВАЖНО: замените эти названия на те, что увидите в отладке!
     type_names = {
         "Сантехника": "🔧 Сантехника",
-        "Электрика": "⚡ Электрика",
+        "Электрика": "⚡ Электрика", 
         "Плиты": "🍵 Плиты",
         "Уборка": "🧹 Уборка",
         "Вопрос / Другое": "❓ Вопрос / Другое"
     }
     
     # ---------- Разделение по типам ----------
-    # Создаем список типов для отображения в заданном порядке
-    types_to_show = ["Сантехника", "Электрика", "Плиты", "Уборка", "Вопрос / Другое"]
+    # Получаем уникальные типы из данных
+    if not display_df.empty:
+        actual_types = display_df["Тип заявки"].unique().tolist()
+    else:
+        actual_types = []
+    
+    # Создаем список типов для отображения
+    if actual_types:
+        # Используем реальные типы из базы данных
+        types_to_show = actual_types
+    else:
+        # Если данных нет, используем стандартные
+        types_to_show = ["Сантехника", "Электрика", "Плиты", "Уборка", "Вопрос / Другое"]
+    
+    st.info(f"📋 Будет отображено {len(types_to_show)} типов заявок")
     
     # Для каждого типа создаём отдельную таблицу
     for category in types_to_show:
-        # Получаем отображаемое название с иконкой
-        display_name = type_names.get(category, category)
+        # Получаем отображаемое название с иконкой (если есть в словаре)
+        display_name = type_names.get(category, f"📌 {category}")
         st.subheader(display_name)
         
         # Фильтруем данные по типу (точное совпадение)
