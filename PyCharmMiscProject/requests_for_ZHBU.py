@@ -225,11 +225,6 @@ def main():
             st.rerun()
                     
     st.divider()
-
-    if st.session_state.selected_dormitory == "Все":
-        st.info("Все заявки")
-    else:
-        st.success(f"{st.session_state.selected_dormitory}")
     
     st.header("📋 Электронные заявки студентов")
     
