@@ -368,7 +368,6 @@ def show_dormitory_requests_with_control(dormitory):
         if selected_ids:
             st.success(f"✅ Выбрано заявок: {len(selected_ids)}")
             
-            # Создаем 4 колонки для компактного расположения
             col1, col2 = st.columns(2)
             
             with col1:
@@ -376,10 +375,9 @@ def show_dormitory_requests_with_control(dormitory):
                     "Новый статус", 
                     ["Новая", "В работе", "Выполнена"], 
                     key=f"bulk_status_{dormitory}_{category}",
-                    label_visibility="collapsed"  # Скрываем label
+                    label_visibility="collapsed"  
                 )
-            
-                st.write("")  # Отступ для выравнивания
+                
                 if st.button(f"🔄 Изменить статус", use_container_width=True, key=f"bulk_update_{dormitory}_{category}"):
                     success_count = 0
                     for id in selected_ids:
