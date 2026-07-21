@@ -656,7 +656,7 @@ def main():
         
     for i, (short, full) in enumerate(zip(dormitories_short, dormitories_full)):
         with cols[i]:
-            if st.button(f"🏢 {short}", use_container_width=True, key=f"dorm_{i+2}"):
+            if st.button(f"🏢 {full}", use_container_width=True, key=f"dorm_{i+2}"):
                 st.session_state.selected_dormitory = full
                 st.session_state.show_stats = False
                 st.session_state.show_all_requests = False
