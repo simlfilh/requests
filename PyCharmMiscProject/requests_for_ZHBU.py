@@ -301,55 +301,65 @@ def show_dormitory_requests_by_type(dormitory):
         selected_date = st.date_input("Выберите дату", value=today, key="date_picker_dorm")
         filtered_df = filtered_df[filtered_df["date"] == selected_date.strftime("%Y-%m-%d")]
     
-    # Список типов заявок
-    types = ["Сантехника", "Электрика", "Плиты", "Уборка", "Другое"]
+    # Список типов заявок с иконками
+    types_with_icons = {
+        "Сантехника": "🔧",
+        "Электрика": "⚡",
+        "Плиты": "🔥",
+        "Уборка": "🧹",
+        "Другое": "📌"
+    }
     
     # Показываем все таблицы на одной странице
-    for type_name in types:
+    for type_name, icon in types_with_icons.items():
         # Фильтруем по типу
         type_df = filtered_df[filtered_df["type"] == type_name]
         
-        # Создаем expander для каждого типа
-        with st.expander(f"🔧 {type_name} ({len(type_df)} заявок)", expanded=False):
-            if type_df.empty:
-                st.info(f"Нет заявок типа '{type_name}'")
-                continue
-            
-            # Переименовываем колонки
-            display_df = type_df.rename(columns={
-                "id": "ID",
-                "date": "Дата",
-                "time": "Время",
-                "fio": "ФИО студента",
-                "email": "Email",
-                "dormitory": "Общежитие",
-                "room": "Комната",
-                "type": "Тип заявки",
-                "description": "Описание",
-                "status": "Статус"
-            })
-            
-            # Показываем метрики для этого типа
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                st.metric("Всего", len(display_df))
-            with col2:
-                st.metric("Новых", len(display_df[display_df["Статус"] == "Новая"]))
-            with col3:
-                st.metric("В работе", len(display_df[display_df["Статус"] == "В работе"]))
-            
-            # Показываем таблицу
-            st.dataframe(display_df, use_container_width=True, hide_index=True)
-            
-            # Экспорт
-            excel_data = to_excel(display_df)
-            st.download_button(
-                label=f"📊 Скачать {type_name} в Excel",
-                data=excel_data,
-                file_name=f"{dormitory.split('|')[0].strip()}_{type_name}_{datetime.now().strftime('%d.%m.%Y_%H:%M:%S')}.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                key=f"export_{dormitory}_{type_name}"
-            )
+        # Разделитель для каждого типа
+        st.markdown("---")
+        
+        # Заголовок с типом и количеством
+        st.subheader(f"{icon} {type_name} ({len(type_df)} заявок)")
+        
+        if type_df.empty:
+            st.info(f"Нет заявок типа '{type_name}'")
+            continue
+        
+        # Переименовываем колонки
+        display_df = type_df.rename(columns={
+            "id": "ID",
+            "date": "Дата",
+            "time": "Время",
+            "fio": "ФИО студента",
+            "email": "Email",
+            "dormitory": "Общежитие",
+            "room": "Комната",
+            "type": "Тип заявки",
+            "description": "Описание",
+            "status": "Статус"
+        })
+        
+        # Показываем метрики для этого типа в одну строку
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("Всего", len(display_df))
+        with col2:
+            st.metric("Новых", len(display_df[display_df["Статус"] == "Новая"]))
+        with col3:
+            st.metric("В работе", len(display_df[display_df["Статус"] == "В работе"]))
+        
+        # Показываем таблицу
+        st.dataframe(display_df, use_container_width=True, hide_index=True)
+        
+        # Экспорт для каждого типа
+        excel_data = to_excel(display_df)
+        st.download_button(
+            label=f"📊 Скачать {type_name} в Excel",
+            data=excel_data,
+            file_name=f"{dormitory.split('|')[0].strip()}_{type_name}_{datetime.now().strftime('%d.%m.%Y_%H:%M:%S')}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            key=f"export_{dormitory}_{type_name}"
+        )
 
 def main():
     # Инициализация session_state
