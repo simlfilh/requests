@@ -299,20 +299,22 @@ def show_all_requests_with_control():
         if selected_ids:
             st.success(f"✅ Выбрано заявок: {len(selected_ids)}")
             
-            col1, col2, col3 = st.columns(3)
+            col1, col2 = st.columns(2)
             
             with col1:
                 if st.button("✅ Выбрать все", use_container_width=True, key="select_all_all"):
                     for idx in edit_df.index:
                         st.session_state[f"data_editor_all_{idx}"] = True
                     st.rerun()
-                
+            
+            with col2:    
                 if st.button("❌ Снять все", use_container_width=True, key="deselect_all_all"):
                     for idx in edit_df.index:
                         st.session_state[f"data_editor_all_{idx}"] = False
                     st.rerun()
-            
-            with col2:
+
+            col3, col4 = st.columns(2)
+            with col3:
                 new_status_bulk = st.selectbox(
                     "Новый статус", 
                     ["Новая", "В работе", "Выполнена"], 
@@ -330,7 +332,7 @@ def show_all_requests_with_control():
                     else:
                         st.error("❌ Ошибка при обновлении статусов")
             
-            with col3:
+            with col4:
                 if st.button(f"🗑️ Удалить ({len(selected_ids)})", use_container_width=True, key="bulk_delete_all", type="primary"):
                     st.session_state.show_bulk_delete_confirm_all = True
                     st.session_state.bulk_delete_ids_all = selected_ids
@@ -348,7 +350,7 @@ def show_all_requests_with_control():
                                 if success:
                                     success_count += 1
                             if success_count > 0:
-                                st.success(f"✅ Удалено {success_count} заявок")
+                                st.success(f"✅ Удалено заявок: {success_count}")
                                 st.session_state.show_bulk_delete_confirm_all = False
                                 st.session_state.bulk_delete_ids_all = []
                                 time.sleep(1)
