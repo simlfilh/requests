@@ -451,6 +451,7 @@ def show_dormitory_requests_with_control(dormitory):
     types_to_show = [
         "🔧 Сантехника",
         "⚡ Электрика",
+        "🔨 Плотник",
         "🍵 Плиты",
         "🧹 Уборка",
         "❓ Вопрос / Другое"
@@ -464,12 +465,12 @@ def show_dormitory_requests_with_control(dormitory):
         cat_df = display_df[display_df["Тип заявки"] == category]
         
         if cat_df.empty:
-            st.info(f"Нет заявок")
+            st.info(f"📭 Нет заявок типа «{category}»")
             st.markdown("---")
             continue
         
         # Показываем количество заявок данного типа
-        st.caption(f"Количество заявок: {len(cat_df)}")
+        st.caption(f"Всего: {len(cat_df)} заявок")
         
         # Добавляем колонку для выбора
         edit_df = cat_df.copy()
@@ -486,7 +487,7 @@ def show_dormitory_requests_with_control(dormitory):
             column_config={
                 "Выбрать": st.column_config.CheckboxColumn(
                     "Выбрать",
-                    help="Отметьте заявки для редактирования",
+                    help="Отметьте заявки для массового управления",
                     default=False,
                 ),
                 "ID": st.column_config.NumberColumn(
@@ -572,7 +573,7 @@ def show_dormitory_requests_with_control(dormitory):
                             st.session_state[f"bulk_delete_ids_{dormitory}_{category}"] = []
                             st.rerun()
         else:
-            st.info("ℹ️ Отметьте заявки в колонке 'Выбрать' для редактирования")
+            st.info("ℹ️ Отметьте заявки в колонке 'Выбрать' для массового управления")
         
         # Экспорт для данного типа
         excel_data = to_excel(cat_df)
