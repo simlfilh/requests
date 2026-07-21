@@ -364,12 +364,12 @@ def show_dormitory_requests_with_control(dormitory):
                     st.session_state[checkbox_key][i] = False
                 st.rerun()
         
-        # ---------- ВТОРАЯ СТРОКА: Выбор статуса, кнопки "Изменить статус" и "Удалить" ----------
+        # ---------- ВТОРАЯ СТРОКА: Выбор статуса и кнопка "Изменить статус" ----------
         if selected_ids:
             st.success(f"✅ Выбрано заявок: {len(selected_ids)}")
             
-            # Создаем 3 колонки для выбора статуса и двух кнопок
-            col_buttons_row2 = st.columns([2, 1, 1])
+            # Создаем 2 колонки для выбора статуса и кнопки изменения
+            col_buttons_row2 = st.columns([2, 1])
             
             with col_buttons_row2[0]:
                 new_status_bulk = st.selectbox(
@@ -395,11 +395,10 @@ def show_dormitory_requests_with_control(dormitory):
                     else:
                         st.error("❌ Ошибка при обновлении статусов")
             
-            with col_buttons_row2[2]:
-                st.write("")  # Отступ для выравнивания
-                if st.button(f"🗑️ Удалить ({len(selected_ids)})", use_container_width=True, key=f"bulk_delete_{dormitory}_{category}", type="primary"):
-                    st.session_state[f"show_bulk_delete_confirm_{dormitory}_{category}"] = True
-                    st.session_state[f"bulk_delete_ids_{dormitory}_{category}"] = selected_ids
+            # ---------- ТРЕТЬЯ СТРОКА: Кнопка "Удалить" ----------
+            if st.button(f"🗑️ Удалить ({len(selected_ids)})", use_container_width=True, key=f"bulk_delete_{dormitory}_{category}", type="primary"):
+                st.session_state[f"show_bulk_delete_confirm_{dormitory}_{category}"] = True
+                st.session_state[f"bulk_delete_ids_{dormitory}_{category}"] = selected_ids
             
             # Диалог подтверждения массового удаления
             confirm_key = f"show_bulk_delete_confirm_{dormitory}_{category}"
