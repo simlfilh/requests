@@ -347,26 +347,30 @@ def show_dormitory_requests_with_control(dormitory):
             if edited_df.loc[i, "Выбрать"]:
                 selected_ids.append(display_cat_df.loc[i, "ID"])
         
-        # Кнопки управления
-        col_buttons = st.columns(3)
+        # ---------- ПЕРВАЯ СТРОКА: Кнопки "Выбрать все" и "Снять все" ----------
+        col_buttons_row1 = st.columns(2)
         
-        with col_buttons[0]:
+        with col_buttons_row1[0]:
             if st.button("✅ Выбрать все", use_container_width=True, key=f"select_all_{dormitory}_{category}"):
                 # Устанавливаем все чекбоксы в True
                 for i in range(len(display_cat_df)):
                     st.session_state[checkbox_key][i] = True
                 st.rerun()
-            
+        
+        with col_buttons_row1[1]:
             if st.button("❌ Снять все", use_container_width=True, key=f"deselect_all_{dormitory}_{category}"):
                 # Устанавливаем все чекбоксы в False
                 for i in range(len(display_cat_df)):
                     st.session_state[checkbox_key][i] = False
                 st.rerun()
         
+        # ---------- ВТОРАЯ СТРОКА: Изменение статуса и Удаление ----------
         if selected_ids:
             st.success(f"✅ Выбрано заявок: {len(selected_ids)}")
             
-            with col_buttons[1]:
+            col_buttons_row2 = st.columns(2)
+            
+            with col_buttons_row2[0]:
                 new_status_bulk = st.selectbox(
                     "Новый статус", 
                     ["Новая", "В работе", "Выполнена"], 
@@ -387,7 +391,7 @@ def show_dormitory_requests_with_control(dormitory):
                     else:
                         st.error("❌ Ошибка при обновлении статусов")
             
-            with col_buttons[2]:
+            with col_buttons_row2[1]:
                 if st.button(f"🗑️ Удалить ({len(selected_ids)})", use_container_width=True, key=f"bulk_delete_{dormitory}_{category}", type="primary"):
                     st.session_state[f"show_bulk_delete_confirm_{dormitory}_{category}"] = True
                     st.session_state[f"bulk_delete_ids_{dormitory}_{category}"] = selected_ids
