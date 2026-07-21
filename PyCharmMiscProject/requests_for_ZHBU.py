@@ -347,101 +347,103 @@ def show_dormitory_requests_with_control(dormitory):
             if edited_df.loc[i, "Выбрать"]:
                 selected_ids.append(display_cat_df.loc[i, "ID"])
         
-        # ---------- ПЕРВАЯ СТРОКА: Кнопки "Выбрать все" и "Снять все" ----------
-        col_buttons_row1 = st.columns(2)
+        # ---------- УПРАВЛЕНИЕ: ДВА СТОЛБЦА ----------
+        col_left, col_right = st.columns(2)
         
-        with col_buttons_row1[0]:
-            if st.button("✅ Выбрать все", use_container_width=True, key=f"select_all_{dormitory}_{category}"):
-                # Устанавливаем все чекбоксы в True
-                for i in range(len(display_cat_df)):
-                    st.session_state[checkbox_key][i] = True
-                st.rerun()
-        
-        with col_buttons_row1[1]:
-            if st.button("❌ Снять все", use_container_width=True, key=f"deselect_all_{dormitory}_{category}"):
-                # Устанавливаем все чекбоксы в False
-                for i in range(len(display_cat_df)):
-                    st.session_state[checkbox_key][i] = False
-                st.rerun()
-        
-        # ---------- ВТОРАЯ СТРОКА: Выбор статуса, кнопка "Изменить статус" и "Удалить" ----------
-        if selected_ids:
-            st.success(f"✅ Выбрано заявок: {len(selected_ids)}")
+        # ЛЕВЫЙ СТОЛБЕЦ: Выбрать все, Снять все, Удалить
+        with col_left:
+            st.markdown("**Управление выбором**")
             
-            col1, col2 = st.columns(2)
+            col_buttons = st.columns(2)
+            with col_buttons[0]:
+                if st.button("✅ Выбрать все", use_container_width=True, key=f"select_all_{dormitory}_{category}"):
+                    for i in range(len(display_cat_df)):
+                        st.session_state[checkbox_key][i] = True
+                    st.rerun()
             
-            with col1:
-                new_status_bulk = st.selectbox(
-                    "Новый статус", 
-                    ["Новая", "В работе", "Выполнена"], 
-                    key=f"bulk_status_{dormitory}_{category}",
-                    label_visibility="collapsed"  
-                )
-                
-                if st.button(f"🔄 Изменить статус", use_container_width=True, key=f"bulk_update_{dormitory}_{category}"):
-                    success_count = 0
-                    for id in selected_ids:
-                        if update_status_with_notification(id, new_status_bulk):
-                            success_count += 1
-                    if success_count > 0:
-                        st.success(f"✅ Статус изменен для {success_count} заявок")
-                        # Сбрасываем чекбоксы после успешного обновления
-                        for i in range(len(display_cat_df)):
-                            st.session_state[checkbox_key][i] = False
-                        time.sleep(1)
-                        st.rerun()
-                    else:
-                        st.error("❌ Ошибка при обновлении статусов")
+            with col_buttons[1]:
+                if st.button("❌ Снять все", use_container_width=True, key=f"deselect_all_{dormitory}_{category}"):
+                    for i in range(len(display_cat_df)):
+                        st.session_state[checkbox_key][i] = False
+                    st.rerun()
             
-            with col2:
-                st.write("")
-                st.write("")
-                if st.button(f"🗑️ Удалить", use_container_width=True, key=f"bulk_delete_{dormitory}_{category}", type="primary"):
+            if selected_ids:
+                if st.button(f"🗑️ Удалить ({len(selected_ids)})", use_container_width=True, key=f"bulk_delete_{dormitory}_{category}", type="primary"):
                     st.session_state[f"show_bulk_delete_confirm_{dormitory}_{category}"] = True
                     st.session_state[f"bulk_delete_ids_{dormitory}_{category}"] = selected_ids
+        
+        # ПРАВЫЙ СТОЛБЕЦ: Выбор статуса, Изменить статус, Экспорт
+        with col_right:
+            st.markdown("**Управление статусом**")
             
-            # Диалог подтверждения массового удаления
-            confirm_key = f"show_bulk_delete_confirm_{dormitory}_{category}"
-            if st.session_state.get(confirm_key, False):
-                with st.container():
-                    st.warning(f"⚠️ Удалить {len(st.session_state[f'bulk_delete_ids_{dormitory}_{category}'])} заявок?")
-                    col_yes, col_no = st.columns(2)
-                    with col_yes:
-                        if st.button("✅ Да", key=f"confirm_bulk_{dormitory}_{category}"):
-                            success_count = 0
-                            for id in st.session_state[f"bulk_delete_ids_{dormitory}_{category}"]:
-                                success, _ = delete_request(id)
-                                if success:
-                                    success_count += 1
-                            if success_count > 0:
-                                st.success(f"✅ Удалено {success_count} заявок")
-                                # Сбрасываем чекбоксы после успешного удаления
-                                for i in range(len(display_cat_df)):
-                                    st.session_state[checkbox_key][i] = False
-                                st.session_state[confirm_key] = False
-                                st.session_state[f"bulk_delete_ids_{dormitory}_{category}"] = []
-                                time.sleep(1)
-                                st.rerun()
-                            else:
-                                st.error("❌ Ошибка при удалении")
-                    with col_no:
-                        if st.button("❌ Нет", key=f"cancel_bulk_{dormitory}_{category}"):
+            if selected_ids:
+                st.success(f"✅ Выбрано: {len(selected_ids)}")
+                
+                col_status = st.columns([2, 1])
+                with col_status[0]:
+                    new_status_bulk = st.selectbox(
+                        "Новый статус", 
+                        ["Новая", "В работе", "Выполнена"], 
+                        key=f"bulk_status_{dormitory}_{category}",
+                        label_visibility="collapsed"
+                    )
+                
+                with col_status[1]:
+                    if st.button(f"🔄 Изменить", use_container_width=True, key=f"bulk_update_{dormitory}_{category}"):
+                        success_count = 0
+                        for id in selected_ids:
+                            if update_status_with_notification(id, new_status_bulk):
+                                success_count += 1
+                        if success_count > 0:
+                            st.success(f"✅ Статус изменен для {success_count} заявок")
+                            for i in range(len(display_cat_df)):
+                                st.session_state[checkbox_key][i] = False
+                            time.sleep(1)
+                            st.rerun()
+                        else:
+                            st.error("❌ Ошибка при обновлении статусов")
+            else:
+                st.info("ℹ️ Выберите заявки для изменения статуса")
+            
+            # Экспорт
+            excel_data = to_excel(cat_df)
+            st.download_button(
+                label=f"📊 Скачать Excel",
+                data=excel_data,
+                file_name=f"{dormitory.split('|')[0].strip()}_{category}_{datetime.now().strftime('%d.%m.%Y_%H:%M:%S')}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                use_container_width=True,
+                key=f"export_{dormitory}_{category}"
+            )
+        
+        # Диалог подтверждения массового удаления
+        confirm_key = f"show_bulk_delete_confirm_{dormitory}_{category}"
+        if st.session_state.get(confirm_key, False):
+            with st.container():
+                st.warning(f"⚠️ Удалить {len(st.session_state[f'bulk_delete_ids_{dormitory}_{category}'])} заявок?")
+                col_yes, col_no = st.columns(2)
+                with col_yes:
+                    if st.button("✅ Да", key=f"confirm_bulk_{dormitory}_{category}"):
+                        success_count = 0
+                        for id in st.session_state[f"bulk_delete_ids_{dormitory}_{category}"]:
+                            success, _ = delete_request(id)
+                            if success:
+                                success_count += 1
+                        if success_count > 0:
+                            st.success(f"✅ Удалено {success_count} заявок")
+                            for i in range(len(display_cat_df)):
+                                st.session_state[checkbox_key][i] = False
                             st.session_state[confirm_key] = False
                             st.session_state[f"bulk_delete_ids_{dormitory}_{category}"] = []
+                            time.sleep(1)
                             st.rerun()
-        else:
-            st.info("ℹ️ Отметьте заявки в колонке 'Выбрать' для массового управления")
-        
-        # Экспорт для данного типа
-        excel_data = to_excel(cat_df)
-        st.download_button(
-            label=f"📊 Скачать {category} в Excel",
-            data=excel_data,
-            file_name=f"{dormitory.split('|')[0].strip()}_{category}_{datetime.now().strftime('%d.%m.%Y_%H:%M:%S')}.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            use_container_width=True,
-            key=f"export_{dormitory}_{category}"
-        )
+                        else:
+                            st.error("❌ Ошибка при удалении")
+                with col_no:
+                    if st.button("❌ Нет", key=f"cancel_bulk_{dormitory}_{category}"):
+                        st.session_state[confirm_key] = False
+                        st.session_state[f"bulk_delete_ids_{dormitory}_{category}"] = []
+                        st.rerun()
         
         st.markdown("---")  # Разделитель между типами
         
@@ -679,7 +681,7 @@ def show_all_requests_with_control():
             st.success(f"✅ Выбрано заявок: {len(selected_ids)}")
             
             # РАЗДЕЛЯЕМ НА 4 КОЛОНКИ
-            col1, col2, col3, col4 = st.columns(4)
+            col1, col2 = st.columns(2)
             
             with col1:
                 if st.button("✅ Выбрать все", use_container_width=True, key="select_all_all"):
@@ -687,13 +689,16 @@ def show_all_requests_with_control():
                         st.session_state[f"data_editor_all_{idx}"] = True
                     st.rerun()
             
-            with col2:    
                 if st.button("❌ Снять все", use_container_width=True, key="deselect_all_all"):
                     for idx in edit_df.index:
                         st.session_state[f"data_editor_all_{idx}"] = False
                     st.rerun()
+
+                if st.button(f"🗑️ Удалить ({len(selected_ids)})", use_container_width=True, key="bulk_delete_all", type="primary"):
+                    st.session_state.show_bulk_delete_confirm_all = True
+                    st.session_state.bulk_delete_ids_all = selected_ids
             
-            with col3:
+            with col2:
                 new_status_bulk = st.selectbox(
                     "Новый статус", 
                     ["Новая", "В работе", "Выполнена"], 
@@ -710,12 +715,7 @@ def show_all_requests_with_control():
                         st.rerun()
                     else:
                         st.error("❌ Ошибка при обновлении статусов")
-            
-            with col4:
-                if st.button(f"🗑️ Удалить ({len(selected_ids)})", use_container_width=True, key="bulk_delete_all", type="primary"):
-                    st.session_state.show_bulk_delete_confirm_all = True
-                    st.session_state.bulk_delete_ids_all = selected_ids
-            
+                
             # Диалог подтверждения массового удаления
             if st.session_state.get('show_bulk_delete_confirm_all', False):
                 with st.container():
