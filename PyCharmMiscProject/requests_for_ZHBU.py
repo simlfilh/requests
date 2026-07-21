@@ -185,28 +185,28 @@ def show_statistics():
     stats_df = pd.DataFrame(stats_data)
     st.dataframe(stats_df, use_container_width=True, hide_index=True)
     
-    for dorm in DORMITORIES:
-        with st.expander(f"📋 {dorm}", expanded=False):
-            dorm_df = load_requests_by_dormitory(dorm)
-            if not dorm_df.empty:
-                dorm_display = dorm_df.rename(columns={
-                    "id": "№", "date": "Дата", "time": "Время",
-                    "fio": "ФИО студента", "email": "Email",
-                    "room": "Комната", "type": "Тип заявки",
-                    "description": "Описание", "status": "Статус"
-                })
-                st.dataframe(dorm_display, use_container_width=True, hide_index=True)
+    # for dorm in DORMITORIES:
+    #     with st.expander(f"📋 {dorm}", expanded=False):
+    #         dorm_df = load_requests_by_dormitory(dorm)
+    #         if not dorm_df.empty:
+    #             dorm_display = dorm_df.rename(columns={
+    #                 "id": "№", "date": "Дата", "time": "Время",
+    #                 "fio": "ФИО студента", "email": "Email",
+    #                 "room": "Комната", "type": "Тип заявки",
+    #                 "description": "Описание", "status": "Статус"
+    #             })
+    #             st.dataframe(dorm_display, use_container_width=True, hide_index=True)
                 
-                excel_data = to_excel(dorm_display)
-                st.download_button(
-                    label=f"📊 Скачать в Excel",
-                    data=excel_data,
-                    file_name=f"Статистика_{dorm.replace(' | ', '_')}_{datetime.now().strftime('%d.%m.%Y_%H:%M:%S')}.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    key=f"export_stats_{dorm}"
-                )
-            else:
-                st.info(f"Нет заявок для {dorm}")
+    #             excel_data = to_excel(dorm_display)
+    #             st.download_button(
+    #                 label=f"📊 Скачать в Excel",
+    #                 data=excel_data,
+    #                 file_name=f"Статистика_{dorm.replace(' | ', '_')}_{datetime.now().strftime('%d.%m.%Y_%H:%M:%S')}.xlsx",
+    #                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    #                 key=f"export_stats_{dorm}"
+    #             )
+    #         else:
+    #             st.info(f"Нет заявок для {dorm}")
 
 def show_all_requests():
     """Функция для отображения всех заявок"""
