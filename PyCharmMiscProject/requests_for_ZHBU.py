@@ -184,6 +184,8 @@ def main():
             st.session_state.show_delete_confirm = False
         if "delete_id" not in st.session_state:
             st.session_state.delete_id = None
+        if "show_stats" not in st.session_state:
+            st.session_state.show_stats = False
     
         if not st.session_state.authenticated:
             with st.form("login_form"):
@@ -202,36 +204,95 @@ def main():
             st.session_state.authenticated = False
             st.rerun()
 
-    
+    # Кнопки общежитий
     cols = st.columns(4)
-    dormitories_short = ["Общежитие №2 | Чкаловский пр-т, д. 27", "Общежитие №3 | пр-т Косыгина, д. 19, к. 2", "Общежитие №4 | ул. Воронежская, д. 69", "Общежитие №7 | ул. Воронежская, д. 38"]
+    dormitories_short = ["№2", "№3", "№4", "№7"]
     dormitories_full = [
-            "Общежитие №2 | Чкаловский пр-т, д. 27",
-            "Общежитие №3 | пр-т Косыгина, д. 19, к. 2",
-            "Общежитие №4 | ул. Воронежская, д. 69",
-            "Общежитие №7 | ул. Воронежская, д. 38"
-        ]
+        "Общежитие №2 | Чкаловский пр-т, д. 27",
+        "Общежитие №3 | пр-т Косыгина, д. 19, к. 2",
+        "Общежитие №4 | ул. Воронежская, д. 69",
+        "Общежитие №7 | ул. Воронежская, д. 38"
+    ]
         
-    for col, short, full in zip(cols, dormitories_short, dormitories_full):
-        with col:
-            if st.button(f"🏢 {short}", use_container_width=True):
+    for i, (short, full) in enumerate(zip(dormitories_short, dormitories_full)):
+        with cols[i]:
+            if st.button(f"🏢 {short}", use_container_width=True, key=f"dorm_{i+2}"):
                 st.session_state.selected_dormitory = full
+                st.session_state.show_stats = False  # Скрываем статистику при выборе общежития
                 st.rerun()
 
+    # Кнопка "Все заявки"
     col_full = st.columns(1)[0]
     with col_full:
         if st.button("📋 Все заявки", use_container_width=True, key="dorm_all"):
             st.session_state.selected_dormitory = "Все"
+            st.session_state.show_stats = False  # Скрываем статистику
             st.rerun()
 
-    col_full2 = st.columns(1)
+    # Кнопка "Статистика"
+    col_full2 = st.columns(1)[0]
     with col_full2:
-        if st.button("📊 Статистика", use_container_width=True, key="dorm_all"):
-            st.session_state.selected_dormitory = "Все"
+        if st.button("📊 Статистика", use_container_width=True, key="show_stats_btn"):
+            st.session_state.show_stats = not st.session_state.show_stats  # Переключаем отображение статистики
             st.rerun()
                     
     st.divider()
     
+    # ===== ПОКАЗЫВАЕМ СТАТИСТИКУ ЕСЛИ НАЖАТА КНОПКА =====
+    if st.session_state.show_stats:
+        st.header("📊 Статистика по общежитиям")
+        
+        stats_data = []
+        for dorm in DORMITORIES:
+            dorm_df = load_requests_by_dormitory(dorm)
+            if not dorm_df.empty:
+                stats_data.append({
+                    "Общежитие": dorm.split('|')[0].strip(),
+                    "Всего": len(dorm_df),
+                    "Новых": len(dorm_df[dorm_df["status"] == "Новая"]),
+                    "В работе": len(dorm_df[dorm_df["status"] == "В работе"]),
+                    "Выполнено": len(dorm_df[dorm_df["status"] == "Выполнена"])
+                })
+            else:
+                stats_data.append({
+                    "Общежитие": dorm.split('|')[0].strip(),
+                    "Всего": 0,
+                    "Новых": 0,
+                    "В работе": 0,
+                    "Выполнено": 0
+                })
+        
+        stats_df = pd.DataFrame(stats_data)
+        st.dataframe(stats_df, use_container_width=True, hide_index=True)
+        
+        # Показываем детальную статистику по каждому общежитию
+        for dorm in DORMITORIES:
+            with st.expander(f"📋 {dorm}", expanded=False):
+                dorm_df = load_requests_by_dormitory(dorm)
+                if not dorm_df.empty:
+                    dorm_display = dorm_df.rename(columns={
+                        "id": "№", "date": "Дата", "time": "Время",
+                        "fio": "ФИО студента", "email": "Email",
+                        "room": "Комната", "type": "Тип заявки",
+                        "description": "Описание", "status": "Статус"
+                    })
+                    
+                    st.dataframe(dorm_display, use_container_width=True, hide_index=True)
+                    
+                    excel_data = to_excel(dorm_display)
+                    st.download_button(
+                        label=f"📊 Скачать в Excel формате",
+                        data=excel_data,
+                        file_name=f"Статистика {dorm.replace(' | ', '_')} {datetime.now().strftime('%d.%m.%Y_%H:%M:%S')}.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        key=f"export_stats_{dorm}"
+                    )
+                else:
+                    st.info(f"Нет заявок для {dorm}")
+        
+        st.divider()
+    
+    # ===== ОСНОВНАЯ ТАБЛИЦА С ЗАЯВКАМИ =====
     st.header("📋 Электронные заявки студентов")
     
     if st.session_state.selected_dormitory == "Все":
@@ -248,123 +309,17 @@ def main():
         return
         
     display_df = df.rename(columns={
-                                    "id": "ID",
-                                    "date": "Дата",
-                                    "time": "Время",
-                                    "fio": "ФИО студента",
-                                    "email": "Email",
-                                    "dormitory": "Общежитие",  
-                                    "room": "Комната",
-                                    "type": "Тип заявки",
-                                    "description": "Описание",
-                                    "status": "Статус"
-                                   })
-
-    with st.expander("📊 Статистика по каждому общежитию", expanded=False):
-        
-        stats_data = []
-        for dorm in DORMITORIES:
-            dorm_df = load_requests_by_dormitory(dorm)
-            if not dorm_df.empty:
-                stats_data.append({
-                    "Общежитие": dorm,
-                    "Всего": len(dorm_df),
-                    "Новых": len(dorm_df[dorm_df["status"] == "Новая"]),
-                    "В работе": len(dorm_df[dorm_df["status"] == "В работе"]),
-                    "Выполнено": len(dorm_df[dorm_df["status"] == "Выполнена"])
-                })
-            else:
-                stats_data.append({
-                    "Общежитие": dorm,
-                    "Всего": 0,
-                    "Новых": 0,
-                    "В работе": 0,
-                    "Выполнено": 0
-                })
-        
-        stats_df = pd.DataFrame(stats_data)
-        st.dataframe(stats_df, use_container_width=True, hide_index=True)
-        
-        for dorm in DORMITORIES:
-            with st.expander(f"📋 {dorm}", expanded=False):
-                dorm_df = load_requests_by_dormitory(dorm)
-                if not dorm_df.empty:
-                    # Создаем DataFrame для отображения
-                    dorm_display = dorm_df.rename(columns={
-                        "id": "№", "date": "Дата", "time": "Время",
-                        "fio": "ФИО студента", "email": "Email",
-                        "room": "Комната", "type": "Тип заявки",
-                        "description": "Описание", "status": "Статус"
-                    })
-                    
-                    # Фильтры для каждого общежития
-                    st.markdown("**Фильтры:**")
-                    col1_f, col2_f, col3_f = st.columns(3)
-                    
-                    with col1_f:
-                        status_filter_dorm = st.selectbox(
-                            "Статус", 
-                            ["Все", "Новая", "В работе", "Выполнена"], 
-                            key=f"status_{dorm}"
-                        )
-                    
-                    with col2_f:
-                        date_options_dorm = ["Все", "Сегодня", "Вчера", "Выбрать дату"]
-                        date_filter_dorm = st.selectbox(
-                            "Период", 
-                            date_options_dorm, 
-                            key=f"date_{dorm}"
-                        )
-                    
-                    with col3_f:
-                        type_options_dorm = ["Все", "Сантехника", "Электрика", "Плиты", "Уборка", "Другое"]
-                        type_filter_dorm = st.selectbox(
-                            "Тип заявки", 
-                            type_options_dorm, 
-                            key=f"type_{dorm}"
-                        )
-                    
-                    # Применяем фильтры
-                    filtered_dorm_df = dorm_display.copy()
-                    
-                    # Фильтр по статусу
-                    if status_filter_dorm != "Все":
-                        filtered_dorm_df = filtered_dorm_df[filtered_dorm_df["Статус"] == status_filter_dorm]
-                    
-                    # Фильтр по типу
-                    if type_filter_dorm != "Все":
-                        filtered_dorm_df = filtered_dorm_df[filtered_dorm_df["Тип заявки"] == type_filter_dorm]
-                    
-                    # Фильтр по дате
-                    today = datetime.now().date()
-                    if date_filter_dorm == "Сегодня":
-                        filtered_dorm_df = filtered_dorm_df[filtered_dorm_df["Дата"] == today.strftime("%Y-%m-%d")]
-                    elif date_filter_dorm == "Вчера":
-                        yesterday = today - timedelta(days=1)
-                        filtered_dorm_df = filtered_dorm_df[filtered_dorm_df["Дата"] == yesterday.strftime("%Y-%m-%d")]
-                    elif date_filter_dorm == "Выбрать дату":
-                        selected_date_dorm = st.date_input("Выберите дату", value=today, key=f"date_picker_{dorm}")
-                        filtered_dorm_df = filtered_dorm_df[filtered_dorm_df["Дата"] == selected_date_dorm.strftime("%Y-%m-%d")]
-                    
-                    st.info(f"📊 Найдено заявок: {len(filtered_dorm_df)} из {len(dorm_display)}")
-                    
-                    # Отображаем отфильтрованную таблицу
-                    st.dataframe(filtered_dorm_df, use_container_width=True, hide_index=True)
-                    
-                    # Кнопка для сброса фильтров
-                    if st.button(f"🔄 Сбросить фильтры", key=f"reset_{dorm}"):
-                        st.rerun()
-                    
-                    excel_data = to_excel(filtered_dorm_df)
-                    st.download_button(
-                        label=f"📊 Скачать в Excel формате",
-                        data=excel_data,
-                        file_name=f"Электронные заявки {dorm.replace(' | ', '_')} {datetime.now().strftime('%d.%m.%Y_%H:%M:%S')}.xlsx",
-                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                        key=f"export_{dorm}"
-                    )
-                else:
-                    st.info(f"Нет заявок для {dorm}")
+        "id": "ID",
+        "date": "Дата",
+        "time": "Время",
+        "fio": "ФИО студента",
+        "email": "Email",
+        "dormitory": "Общежитие",  
+        "room": "Комната",
+        "type": "Тип заявки",
+        "description": "Описание",
+        "status": "Статус"
+    })
 
     col1, col2, col3 = st.columns(3)
 
