@@ -185,297 +185,140 @@ def show_statistics():
     stats_df = pd.DataFrame(stats_data)
     st.dataframe(stats_df, use_container_width=True, hide_index=True)
 
-def show_all_requests():
-    """Функция для отображения всех заявок"""
+def show_all_requests_with_control():
+    """Функция для отображения всех заявок с управлением"""
     st.header("📋 Все заявки студентов")
-        
-    df_all = load_requests()
-    if not df_all.empty:
-        display_df_all = df_all.rename(columns={
-            "id": "ID",
-            "date": "Дата",
-            "time": "Время",
-            "fio": "ФИО студента",
-            "email": "Email",
-            "dormitory": "Общежитие",  
-            "room": "Комната",
-            "type": "Тип заявки",
-            "description": "Описание",
-            "status": "Статус"
-            })
-            
-        # Добавляем фильтры для всех заявок
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            status_filter_all = st.selectbox("Статус", ["Все", "Новая", "В работе", "Выполнена"], key="status_all")
-        with col2:
-            dorm_filter_all = st.selectbox("Общежитие", ["Все"] + [d.split('|')[0].strip() for d in DORMITORIES], key="dorm_all_filter")
-        with col3:
-            date_options_all = ["Все", "Сегодня", "Вчера", "Выбрать дату", "Выбрать период"]
-            date_filter_all = st.selectbox("Период", date_options_all, key="date_all_filter")
-        
-        # Применяем фильтры
-        filtered_all_df = display_df_all.copy()
-        
-        if status_filter_all != "Все":
-            filtered_all_df = filtered_all_df[filtered_all_df["Статус"] == status_filter_all]
-        
-        if dorm_filter_all != "Все":
-            filtered_all_df = filtered_all_df[filtered_all_df["Общежитие"].str.contains(dorm_filter_all)]
-        
-        today = datetime.now().date()
-        
-        # Фильтр по дате
-        if date_filter_all == "Сегодня":
-            filtered_all_df = filtered_all_df[filtered_all_df["Дата"] == today.strftime("%Y-%m-%d")]
-        elif date_filter_all == "Вчера":
-            yesterday = today - timedelta(days=1)
-            filtered_all_df = filtered_all_df[filtered_all_df["Дата"] == yesterday.strftime("%Y-%m-%d")]
-        elif date_filter_all == "Выбрать дату":
-            selected_date = st.date_input("Выберите дату", value=today, key="date_picker_all")
-            filtered_all_df = filtered_all_df[filtered_all_df["Дата"] == selected_date.strftime("%Y-%m-%d")]
-        elif date_filter_all == "Выбрать период":
-            col1, col2 = st.columns(2)
-            with col1:
-                start_date = st.date_input("Начальная дата", value=today - timedelta(days=7), key="start_date_all")
-            with col2:
-                end_date = st.date_input("Конечная дата", value=today, key="end_date_all")
-            filtered_all_df["Дата"] = pd.to_datetime(filtered_all_df["Дата"])
-            filtered_all_df = filtered_all_df[(filtered_all_df["Дата"] >= pd.Timestamp(start_date)) & (filtered_all_df["Дата"] <= pd.Timestamp(end_date))]
-            filtered_all_df["Дата"] = filtered_all_df["Дата"].dt.strftime("%Y-%m-%d")
-        
-        # Показываем метрики
-        col1, col2, col3, col4 = st.columns(4)
-        with col1:
-            st.metric("Всего", len(filtered_all_df))
-        with col2:
-            st.metric("Новых", len(filtered_all_df[filtered_all_df["Статус"] == "Новая"]))
-        with col3:
-            st.metric("В работе", len(filtered_all_df[filtered_all_df["Статус"] == "В работе"]))
-        with col4:
-            st.metric("Выполнено", len(filtered_all_df[filtered_all_df["Статус"] == "Выполнена"]))
-            
-        # Отображаем таблицу
-        st.dataframe(
-                filtered_all_df,
-                use_container_width=True,
-                hide_index=True,
-                column_config={
-                    "Статус": st.column_config.TextColumn(
-                        "Статус",
-                        help="Статус заявки",
-                        width="small",
-                    ),
-                    "ID": st.column_config.NumberColumn(
-                        "№",
-                        help="Номер заявки",
-                        width="small",
-                    ),
-                }
-            )
-            
-        # Кнопка экспорта
-        col1, col2 = st.columns(2)
-        with col1:
-                excel_data = to_excel(filtered_all_df)
-                st.download_button(
-                    label="📊 Скачать все заявки в Excel",
-                    data=excel_data,
-                    file_name=f"Все_заявки_{datetime.now().strftime('%d.%m.%Y_%H:%M:%S')}.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    use_container_width=True,
-                    key="download_all_excel"
-                )
-        with col2:
-            if st.button("🔄 Обновить", use_container_width=True, key="refresh_all"):
-                st.rerun()
-    else:
-        st.info("📭 Пока нет ни одной заявки.")
-
-def show_dormitory_requests_by_type(dormitory):
-    """Функция для отображения заявок по типам для конкретного общежития"""
-    df = load_requests_by_dormitory(dormitory)
     
-    if df.empty:
-        st.info(f"Нет заявок для {dormitory}")
+    df_all = load_requests()
+    if df_all.empty:
+        st.info("📭 Пока нет ни одной заявки.")
         return
     
-    # Фильтры для общежития
+    display_df_all = df_all.rename(columns={
+        "id": "ID",
+        "date": "Дата",
+        "time": "Время",
+        "fio": "ФИО студента",
+        "email": "Email",
+        "dormitory": "Общежитие",  
+        "room": "Комната",
+        "type": "Тип заявки",
+        "description": "Описание",
+        "status": "Статус"
+    })
+    
+    # Добавляем фильтры
     st.subheader("🔍 Фильтры")
-    col1, col2 = st.columns(2)
+    col1, col2, col3 = st.columns(3)
     with col1:
-        status_filter = st.selectbox("Статус", ["Все", "Новая", "В работе", "Выполнена"], key="status_dorm")
+        status_filter_all = st.selectbox("Статус", ["Все", "Новая", "В работе", "Выполнена"], key="status_all")
     with col2:
-        date_options = ["Все", "Сегодня", "Вчера", "Выбрать дату", "Выбрать период"]
-        date_filter = st.selectbox("Период", date_options, key="date_dorm")
+        dorm_filter_all = st.selectbox("Общежитие", ["Все"] + [d.split('|')[0].strip() for d in DORMITORIES], key="dorm_all_filter")
+    with col3:
+        date_options_all = ["Все", "Сегодня", "Вчера", "Выбрать дату", "Выбрать период"]
+        date_filter_all = st.selectbox("Период", date_options_all, key="date_all_filter")
     
     # Применяем фильтры
-    filtered_df = df.copy()
+    filtered_df = display_df_all.copy()
     
-    if status_filter != "Все":
-        filtered_df = filtered_df[filtered_df["status"] == status_filter]
+    if status_filter_all != "Все":
+        filtered_df = filtered_df[filtered_df["Статус"] == status_filter_all]
+    
+    if dorm_filter_all != "Все":
+        filtered_df = filtered_df[filtered_df["Общежитие"].str.contains(dorm_filter_all)]
     
     today = datetime.now().date()
     
     # Фильтр по дате
-    if date_filter == "Сегодня":
-        filtered_df = filtered_df[filtered_df["date"] == today.strftime("%Y-%m-%d")]
-    elif date_filter == "Вчера":
+    if date_filter_all == "Сегодня":
+        filtered_df = filtered_df[filtered_df["Дата"] == today.strftime("%Y-%m-%d")]
+    elif date_filter_all == "Вчера":
         yesterday = today - timedelta(days=1)
-        filtered_df = filtered_df[filtered_df["date"] == yesterday.strftime("%Y-%m-%d")]
-    elif date_filter == "Выбрать дату":
-        selected_date = st.date_input("Выберите дату", value=today, key="date_picker_dorm")
-        filtered_df = filtered_df[filtered_df["date"] == selected_date.strftime("%Y-%m-%d")]
-    elif date_filter == "Выбрать период":
+        filtered_df = filtered_df[filtered_df["Дата"] == yesterday.strftime("%Y-%m-%d")]
+    elif date_filter_all == "Выбрать дату":
+        selected_date = st.date_input("Выберите дату", value=today, key="date_picker_all")
+        filtered_df = filtered_df[filtered_df["Дата"] == selected_date.strftime("%Y-%m-%d")]
+    elif date_filter_all == "Выбрать период":
         col1, col2 = st.columns(2)
         with col1:
-            start_date = st.date_input("Начальная дата", value=today - timedelta(days=7), key="start_date_dorm")
+            start_date = st.date_input("Начальная дата", value=today - timedelta(days=7), key="start_date_all")
         with col2:
-            end_date = st.date_input("Конечная дата", value=today, key="end_date_dorm")
-        filtered_df["date"] = pd.to_datetime(filtered_df["date"])
-        filtered_df = filtered_df[(filtered_df["date"] >= pd.Timestamp(start_date)) & (filtered_df["date"] <= pd.Timestamp(end_date))]
-        filtered_df["date"] = filtered_df["date"].dt.strftime("%Y-%m-%d")
+            end_date = st.date_input("Конечная дата", value=today, key="end_date_all")
+        filtered_df["Дата"] = pd.to_datetime(filtered_df["Дата"])
+        filtered_df = filtered_df[(filtered_df["Дата"] >= pd.Timestamp(start_date)) & (filtered_df["Дата"] <= pd.Timestamp(end_date))]
+        filtered_df["Дата"] = filtered_df["Дата"].dt.strftime("%Y-%m-%d")
     
-    # Список типов заявок с иконками
-    types_with_icons = {
-        "Сантехника": "🔧",
-        "Электрика": "⚡",
-        "Плиты": "🔥",
-        "Уборка": "🧹",
-        "Другое": "📌"
-    }
+    # Показываем метрики
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.metric("Всего", len(filtered_df))
+    with col2:
+        st.metric("Новых", len(filtered_df[filtered_df["Статус"] == "Новая"]))
+    with col3:
+        st.metric("В работе", len(filtered_df[filtered_df["Статус"] == "В работе"]))
+    with col4:
+        st.metric("Выполнено", len(filtered_df[filtered_df["Статус"] == "Выполнена"]))
     
-    # Показываем все таблицы на одной странице
-    for type_name, icon in types_with_icons.items():
-        # Фильтруем по типу
-        type_df = filtered_df[filtered_df["type"] == type_name]
-        
-        # Разделитель для каждого типа
-        st.markdown("---")
-        
-        # Заголовок с типом и количеством
-        st.subheader(f"{icon} {type_name} ({len(type_df)} заявок)")
-        
-        if type_df.empty:
-            st.info(f"Нет заявок типа '{type_name}'")
-            continue
-        
-        # Переименовываем колонки
-        display_df = type_df.rename(columns={
-            "id": "ID",
-            "date": "Дата",
-            "time": "Время",
-            "fio": "ФИО студента",
-            "email": "Email",
-            "dormitory": "Общежитие",
-            "room": "Комната",
-            "type": "Тип заявки",
-            "description": "Описание",
-            "status": "Статус"
-        })
-        
-        # Показываем метрики для этого типа в одну строку
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            st.metric("Всего", len(display_df))
-        with col2:
-            st.metric("Новых", len(display_df[display_df["Статус"] == "Новая"]))
-        with col3:
-            st.metric("В работе", len(display_df[display_df["Статус"] == "В работе"]))
-        
-        # Показываем таблицу
-        st.dataframe(display_df, use_container_width=True, hide_index=True)
-        
-        # Экспорт для каждого типа
-        excel_data = to_excel(display_df)
-        st.download_button(
-            label=f"📊 Скачать {type_name} в Excel",
-            data=excel_data,
-            file_name=f"{dormitory.split('|')[0].strip()}_{type_name}_{datetime.now().strftime('%d.%m.%Y_%H:%M:%S')}.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            key=f"export_{dormitory}_{type_name}"
-        )
-    
-    # Блок массового управления
+    # Управление через data_editor
     st.markdown("---")
-    st.subheader("✅ Массовое управление заявками")
+    st.subheader("✅ Управление заявками")
     
     if not filtered_df.empty:
-        # Переименовываем для отображения
-        display_filtered = filtered_df.rename(columns={
-            "id": "ID",
-            "date": "Дата",
-            "time": "Время",
-            "fio": "ФИО студента",
-            "email": "Email",
-            "dormitory": "Общежитие",
-            "room": "Комната",
-            "type": "Тип заявки",
-            "description": "Описание",
-            "status": "Статус"
-        })
+        # Добавляем колонку для выбора
+        edit_df = filtered_df.copy()
+        edit_df.insert(0, "Выбрать", False)
         
-        st.info("✅ Отметьте заявки, к которым нужно применить действие")
-        
-        # Создаем чекбоксы для каждой строки
-        checkboxes = {}
-        cols = st.columns([0.5, 0.5, 1.5, 1.5, 1.5, 1, 1.5, 1.5, 2, 1])
-        headers = ["✓", "ID", "Дата", "Время", "ФИО студента", "Email", "Общежитие", "Комната", "Тип заявки", "Статус"]
-        for col, header in zip(cols, headers):
-            with col:
-                st.markdown(f"**{header}**")
-        
-        for idx, row in display_filtered.iterrows():
-            cols = st.columns([0.5, 0.5, 1.5, 1.5, 1.5, 1, 1.5, 1.5, 2, 1])
-            
-            with cols[0]:
-                checkboxes[idx] = st.checkbox("", key=f"row_check_dorm_{idx}", value=False)
-            with cols[1]:
-                st.write(row['ID'])
-            with cols[2]:
-                st.write(row['Дата'])
-            with cols[3]:
-                st.write(row['Время'])
-            with cols[4]:
-                st.write(row['ФИО студента'])
-            with cols[5]:
-                st.write(row['Email'])
-            with cols[6]:
-                st.write(row['Общежитие'])
-            with cols[7]:
-                st.write(row['Комната'])
-            with cols[8]:
-                st.write(row['Тип заявки'])
-            with cols[9]:
-                status_icons = {"Новая": "🔴", "В работе": "🟡", "Выполнена": "🟢"}
-                st.write(f"{status_icons.get(row['Статус'], '')} {row['Статус']}")
+        # Отображаем редактируемую таблицу
+        edited_df = st.data_editor(
+            edit_df,
+            use_container_width=True,
+            hide_index=True,
+            column_config={
+                "Выбрать": st.column_config.CheckboxColumn(
+                    "Выбрать",
+                    help="Отметьте заявки для массового управления",
+                    default=False,
+                ),
+                "ID": st.column_config.NumberColumn(
+                    "№",
+                    help="Номер заявки",
+                    width="small",
+                ),
+                "Статус": st.column_config.TextColumn(
+                    "Статус",
+                    width="small",
+                ),
+            },
+            disabled=["ID", "Дата", "Время", "ФИО студента", "Email", "Общежитие", "Комната", "Тип заявки", "Описание", "Статус"],
+            key="data_editor_all"
+        )
         
         # Получаем выбранные ID
-        selected_ids = [row['ID'] for idx, row in display_filtered.iterrows() if checkboxes.get(idx, False)]
+        selected_ids = edited_df[edited_df["Выбрать"] == True]["ID"].tolist()
         
         if selected_ids:
             st.success(f"✅ Выбрано заявок: {len(selected_ids)}")
             
-            col1, col2, col3, col4 = st.columns(4)
+            col1, col2, col3 = st.columns(3)
+            
             with col1:
-                if st.button("✅ Выбрать все", use_container_width=True, key="select_all_dorm"):
-                    for idx in display_filtered.index:
-                        st.session_state[f"row_check_dorm_{idx}"] = True
+                if st.button("✅ Выбрать все", use_container_width=True, key="select_all_all"):
+                    for idx in edit_df.index:
+                        st.session_state[f"data_editor_all_{idx}"] = True
+                    st.rerun()
+                
+                if st.button("❌ Снять все", use_container_width=True, key="deselect_all_all"):
+                    for idx in edit_df.index:
+                        st.session_state[f"data_editor_all_{idx}"] = False
                     st.rerun()
             
             with col2:
-                if st.button("❌ Снять все", use_container_width=True, key="deselect_all_dorm"):
-                    for idx in display_filtered.index:
-                        st.session_state[f"row_check_dorm_{idx}"] = False
-                    st.rerun()
-            
-            with col3:
                 new_status_bulk = st.selectbox(
                     "Новый статус", 
                     ["Новая", "В работе", "Выполнена"], 
-                    key="bulk_status_dorm"
+                    key="bulk_status_all"
                 )
-                if st.button(f"🔄 Изменить статус ({len(selected_ids)})", use_container_width=True, key="bulk_update_dorm"):
+                if st.button(f"🔄 Изменить статус ({len(selected_ids)})", use_container_width=True, key="bulk_update_all"):
                     success_count = 0
                     for id in selected_ids:
                         if update_status_with_notification(id, new_status_bulk):
@@ -487,38 +330,242 @@ def show_dormitory_requests_by_type(dormitory):
                     else:
                         st.error("❌ Ошибка при обновлении статусов")
             
-            with col4:
-                if st.button(f"🗑️ Удалить ({len(selected_ids)})", use_container_width=True, key="bulk_delete_dorm", type="primary"):
-                    st.session_state.show_bulk_delete_confirm_dorm = True
-                    st.session_state.bulk_delete_ids_dorm = selected_ids
+            with col3:
+                if st.button(f"🗑️ Удалить ({len(selected_ids)})", use_container_width=True, key="bulk_delete_all", type="primary"):
+                    st.session_state.show_bulk_delete_confirm_all = True
+                    st.session_state.bulk_delete_ids_all = selected_ids
             
             # Диалог подтверждения массового удаления
-            if st.session_state.get('show_bulk_delete_confirm_dorm', False):
+            if st.session_state.get('show_bulk_delete_confirm_all', False):
                 with st.container():
-                    st.warning(f"⚠️ Удалить {len(st.session_state.bulk_delete_ids_dorm)} заявок?")
+                    st.warning(f"⚠️ Удалить {len(st.session_state.bulk_delete_ids_all)} заявок?")
                     col_yes, col_no = st.columns(2)
                     with col_yes:
-                        if st.button("✅ Да", key="confirm_bulk_dorm"):
+                        if st.button("✅ Да", key="confirm_bulk_all"):
                             success_count = 0
-                            for id in st.session_state.bulk_delete_ids_dorm:
+                            for id in st.session_state.bulk_delete_ids_all:
                                 success, _ = delete_request(id)
                                 if success:
                                     success_count += 1
                             if success_count > 0:
                                 st.success(f"✅ Удалено {success_count} заявок")
-                                st.session_state.show_bulk_delete_confirm_dorm = False
-                                st.session_state.bulk_delete_ids_dorm = []
+                                st.session_state.show_bulk_delete_confirm_all = False
+                                st.session_state.bulk_delete_ids_all = []
                                 time.sleep(1)
                                 st.rerun()
+                            else:
+                                st.error("❌ Ошибка при удалении")
                     with col_no:
-                        if st.button("❌ Нет", key="cancel_bulk_dorm"):
-                            st.session_state.show_bulk_delete_confirm_dorm = False
-                            st.session_state.bulk_delete_ids_dorm = []
+                        if st.button("❌ Нет", key="cancel_bulk_all"):
+                            st.session_state.show_bulk_delete_confirm_all = False
+                            st.session_state.bulk_delete_ids_all = []
                             st.rerun()
         else:
-            st.info("ℹ️ Выберите заявки для массового управления")
+            st.info("ℹ️ Отметьте заявки в колонке 'Выбрать' для массового управления")
+        
+        # Экспорт
+        st.markdown("---")
+        st.subheader("📥 Экспорт данных")
+        
+        excel_data = to_excel(filtered_df)
+        st.download_button(
+            label="📊 Скачать в Excel формате",
+            data=excel_data,
+            file_name=f"Все_заявки_{datetime.now().strftime('%d.%m.%Y_%H:%M:%S')}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            use_container_width=True,
+            key="export_all"
+        )
     else:
-        st.warning("Нет заявок для управления")
+        st.warning("Нет заявок для отображения")
+
+def show_dormitory_requests_with_control(dormitory):
+    """Функция для отображения заявок конкретного общежития с управлением"""
+    df = load_requests_by_dormitory(dormitory)
+    
+    if df.empty:
+        st.info(f"Нет заявок для {dormitory}")
+        return
+    
+    # Фильтры
+    st.subheader("🔍 Фильтры")
+    col1, col2 = st.columns(2)
+    with col1:
+        status_filter = st.selectbox("Статус", ["Все", "Новая", "В работе", "Выполнена"], key=f"status_{dormitory}")
+    with col2:
+        date_options = ["Все", "Сегодня", "Вчера", "Выбрать дату", "Выбрать период"]
+        date_filter = st.selectbox("Период", date_options, key=f"date_{dormitory}")
+    
+    # Применяем фильтры
+    filtered_df = df.copy()
+    
+    if status_filter != "Все":
+        filtered_df = filtered_df[filtered_df["status"] == status_filter]
+    
+    today = datetime.now().date()
+    
+    if date_filter == "Сегодня":
+        filtered_df = filtered_df[filtered_df["date"] == today.strftime("%Y-%m-%d")]
+    elif date_filter == "Вчера":
+        yesterday = today - timedelta(days=1)
+        filtered_df = filtered_df[filtered_df["date"] == yesterday.strftime("%Y-%m-%d")]
+    elif date_filter == "Выбрать дату":
+        selected_date = st.date_input("Выберите дату", value=today, key=f"date_picker_{dormitory}")
+        filtered_df = filtered_df[filtered_df["date"] == selected_date.strftime("%Y-%m-%d")]
+    elif date_filter == "Выбрать период":
+        col1, col2 = st.columns(2)
+        with col1:
+            start_date = st.date_input("Начальная дата", value=today - timedelta(days=7), key=f"start_date_{dormitory}")
+        with col2:
+            end_date = st.date_input("Конечная дата", value=today, key=f"end_date_{dormitory}")
+        filtered_df["date"] = pd.to_datetime(filtered_df["date"])
+        filtered_df = filtered_df[(filtered_df["date"] >= pd.Timestamp(start_date)) & (filtered_df["date"] <= pd.Timestamp(end_date))]
+        filtered_df["date"] = filtered_df["date"].dt.strftime("%Y-%m-%d")
+    
+    # Переименовываем для отображения
+    display_df = filtered_df.rename(columns={
+        "id": "ID",
+        "date": "Дата",
+        "time": "Время",
+        "fio": "ФИО студента",
+        "email": "Email",
+        "dormitory": "Общежитие",
+        "room": "Комната",
+        "type": "Тип заявки",
+        "description": "Описание",
+        "status": "Статус"
+    })
+    
+    # Метрики
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.metric("Всего", len(display_df))
+    with col2:
+        st.metric("Новых", len(display_df[display_df["Статус"] == "Новая"]))
+    with col3:
+        st.metric("В работе", len(display_df[display_df["Статус"] == "В работе"]))
+    with col4:
+        st.metric("Выполнено", len(display_df[display_df["Статус"] == "Выполнена"]))
+    
+    # Управление через data_editor
+    st.markdown("---")
+    st.subheader("✅ Управление заявками")
+    
+    if not display_df.empty:
+        # Добавляем колонку для выбора
+        edit_df = display_df.copy()
+        edit_df.insert(0, "Выбрать", False)
+        
+        # Отображаем редактируемую таблицу
+        edited_df = st.data_editor(
+            edit_df,
+            use_container_width=True,
+            hide_index=True,
+            column_config={
+                "Выбрать": st.column_config.CheckboxColumn(
+                    "Выбрать",
+                    help="Отметьте заявки для массового управления",
+                    default=False,
+                ),
+                "ID": st.column_config.NumberColumn(
+                    "№",
+                    help="Номер заявки",
+                    width="small",
+                ),
+                "Статус": st.column_config.TextColumn(
+                    "Статус",
+                    width="small",
+                ),
+            },
+            disabled=["ID", "Дата", "Время", "ФИО студента", "Email", "Общежитие", "Комната", "Тип заявки", "Описание", "Статус"],
+            key=f"data_editor_{dormitory}"
+        )
+        
+        # Получаем выбранные ID
+        selected_ids = edited_df[edited_df["Выбрать"] == True]["ID"].tolist()
+        
+        if selected_ids:
+            st.success(f"✅ Выбрано заявок: {len(selected_ids)}")
+            
+            col1, col2, col3 = st.columns(3)
+            
+            with col1:
+                if st.button("✅ Выбрать все", use_container_width=True, key=f"select_all_{dormitory}"):
+                    for idx in edit_df.index:
+                        st.session_state[f"data_editor_{dormitory}_{idx}"] = True
+                    st.rerun()
+                
+                if st.button("❌ Снять все", use_container_width=True, key=f"deselect_all_{dormitory}"):
+                    for idx in edit_df.index:
+                        st.session_state[f"data_editor_{dormitory}_{idx}"] = False
+                    st.rerun()
+            
+            with col2:
+                new_status_bulk = st.selectbox(
+                    "Новый статус", 
+                    ["Новая", "В работе", "Выполнена"], 
+                    key=f"bulk_status_{dormitory}"
+                )
+                if st.button(f"🔄 Изменить статус ({len(selected_ids)})", use_container_width=True, key=f"bulk_update_{dormitory}"):
+                    success_count = 0
+                    for id in selected_ids:
+                        if update_status_with_notification(id, new_status_bulk):
+                            success_count += 1
+                    if success_count > 0:
+                        st.success(f"✅ Статус изменен для {success_count} заявок")
+                        time.sleep(1)
+                        st.rerun()
+                    else:
+                        st.error("❌ Ошибка при обновлении статусов")
+            
+            with col3:
+                if st.button(f"🗑️ Удалить ({len(selected_ids)})", use_container_width=True, key=f"bulk_delete_{dormitory}", type="primary"):
+                    st.session_state[f"show_bulk_delete_confirm_{dormitory}"] = True
+                    st.session_state[f"bulk_delete_ids_{dormitory}"] = selected_ids
+            
+            # Диалог подтверждения массового удаления
+            if st.session_state.get(f'show_bulk_delete_confirm_{dormitory}', False):
+                with st.container():
+                    st.warning(f"⚠️ Удалить {len(st.session_state[f'bulk_delete_ids_{dormitory}'])} заявок?")
+                    col_yes, col_no = st.columns(2)
+                    with col_yes:
+                        if st.button("✅ Да", key=f"confirm_bulk_{dormitory}"):
+                            success_count = 0
+                            for id in st.session_state[f"bulk_delete_ids_{dormitory}"]:
+                                success, _ = delete_request(id)
+                                if success:
+                                    success_count += 1
+                            if success_count > 0:
+                                st.success(f"✅ Удалено {success_count} заявок")
+                                st.session_state[f"show_bulk_delete_confirm_{dormitory}"] = False
+                                st.session_state[f"bulk_delete_ids_{dormitory}"] = []
+                                time.sleep(1)
+                                st.rerun()
+                            else:
+                                st.error("❌ Ошибка при удалении")
+                    with col_no:
+                        if st.button("❌ Нет", key=f"cancel_bulk_{dormitory}"):
+                            st.session_state[f"show_bulk_delete_confirm_{dormitory}"] = False
+                            st.session_state[f"bulk_delete_ids_{dormitory}"] = []
+                            st.rerun()
+        else:
+            st.info("ℹ️ Отметьте заявки в колонке 'Выбрать' для массового управления")
+        
+        # Экспорт
+        st.markdown("---")
+        st.subheader("📥 Экспорт данных")
+        
+        excel_data = to_excel(display_df)
+        st.download_button(
+            label="📊 Скачать в Excel формате",
+            data=excel_data,
+            file_name=f"{dormitory.split('|')[0].strip()}_{datetime.now().strftime('%d.%m.%Y_%H:%M:%S')}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            use_container_width=True,
+            key=f"export_{dormitory}"
+        )
+    else:
+        st.warning("Нет заявок для отображения")
 
 def main():
     # Инициализация session_state
@@ -526,22 +573,14 @@ def main():
         st.session_state.authenticated = False
     if "selected_dormitory" not in st.session_state:
         st.session_state.selected_dormitory = "Все"
-    if "show_delete_confirm" not in st.session_state:
-        st.session_state.show_delete_confirm = False
-    if "delete_id" not in st.session_state:
-        st.session_state.delete_id = None
     if "show_stats" not in st.session_state:
         st.session_state.show_stats = False
     if "show_all_requests" not in st.session_state:
         st.session_state.show_all_requests = False
-    if "show_bulk_delete_confirm_dorm" not in st.session_state:
-        st.session_state.show_bulk_delete_confirm_dorm = False
-    if "bulk_delete_ids_dorm" not in st.session_state:
-        st.session_state.bulk_delete_ids_dorm = []
-    if "show_bulk_delete_confirm_table" not in st.session_state:
-        st.session_state.show_bulk_delete_confirm_table = False
-    if "bulk_delete_ids_table" not in st.session_state:
-        st.session_state.bulk_delete_ids_table = []
+    if "show_bulk_delete_confirm_all" not in st.session_state:
+        st.session_state.show_bulk_delete_confirm_all = False
+    if "bulk_delete_ids_all" not in st.session_state:
+        st.session_state.bulk_delete_ids_all = []
 
     # Шапка и аутентификация
     col1, col2 = st.columns([6, 1])
@@ -606,215 +645,46 @@ def main():
         st.divider()
     
     # Отображение всех заявок
-    if st.session_state.show_all_requests:
-        show_all_requests()
+    elif st.session_state.show_all_requests:
+        show_all_requests_with_control()
         st.divider()
     
     # Основная таблица с заявками (по умолчанию)
-    if not st.session_state.show_all_requests and not st.session_state.show_stats:
+    else:
         st.header("📋 Электронные заявки студентов")
         
         if st.session_state.selected_dormitory == "Все":
-            df = load_requests()
-            title = "Общая таблица всех заявок"
-            st.subheader(title)
+            st.info("🏠 Выберите общежитие для просмотра заявок или нажмите 'Все заявки'")
             
-            if df.empty:
-                st.info("Пока нет ни одной заявки.")
-                return
-                
-            display_df = df.rename(columns={
-                "id": "ID",
-                "date": "Дата",
-                "time": "Время",
-                "fio": "ФИО студента",
-                "email": "Email",
-                "dormitory": "Общежитие",  
-                "room": "Комната",
-                "type": "Тип заявки",
-                "description": "Описание",
-                "status": "Статус"
-            })
-
-            # Фильтры
-            col1, col2 = st.columns(2)
-            with col1:
-                status_filter = st.selectbox("Статус", ["Все", "Новая", "В работе", "Выполнена"])
-            with col2:
-                date_options = ["Все", "Сегодня", "Вчера", "Выбрать дату", "Выбрать период"]
-                date_filter_type = st.selectbox("Период", date_options)
-
-            filtered_df = display_df.copy()
-
-            if status_filter != "Все":
-                filtered_df = filtered_df[filtered_df["Статус"] == status_filter]
-            
-            today = datetime.now().date()
-            
-            # Фильтр по дате
-            if date_filter_type == "Сегодня":
-                filtered_df = filtered_df[filtered_df["Дата"] == today.strftime("%Y-%m-%d")]
-            elif date_filter_type == "Вчера":
-                yesterday = today - timedelta(days=1)
-                filtered_df = filtered_df[filtered_df["Дата"] == yesterday.strftime("%Y-%m-%d")]
-            elif date_filter_type == "Выбрать дату":
-                selected_date = st.date_input("Выберите дату", value=today)
-                filtered_df = filtered_df[filtered_df["Дата"] == selected_date.strftime("%Y-%m-%d")]
-            elif date_filter_type == "Выбрать период":
-                col1, col2 = st.columns(2)
-                with col1:
-                    start_date = st.date_input("Начальная дата", value=today - timedelta(days=7))
-                with col2:
-                    end_date = st.date_input("Конечная дата", value=today)
-                filtered_df["Дата"] = pd.to_datetime(filtered_df["Дата"])
-                filtered_df = filtered_df[(filtered_df["Дата"] >= pd.Timestamp(start_date)) & (filtered_df["Дата"] <= pd.Timestamp(end_date))]
-                filtered_df["Дата"] = filtered_df["Дата"].dt.strftime("%Y-%m-%d")
-
-            # Метрики
-            col1, col2, col3, col4 = st.columns(4)
-            with col1:
-                st.metric("Всего в фильтре", len(filtered_df))
-            with col2:
-                st.metric("Новых", len(filtered_df[filtered_df["Статус"] == "Новая"]))
-            with col3:
-                st.metric("В работе", len(filtered_df[filtered_df["Статус"] == "В работе"]))
-            with col4:
-                st.metric("Выполнено", len(filtered_df[filtered_df["Статус"] == "Выполнена"]))
-
-            if st.button("🔄 Обновить сейчас"):
-                st.rerun()
-
-            st.dataframe(filtered_df, use_container_width=True, hide_index=True)
-            
-            # ===== БЛОК УПРАВЛЕНИЯ С DATA_EDITOR =====
-            st.markdown("---")
-            st.subheader("✅ Управление заявками")
-            
-            if not filtered_df.empty:
-                # Создаем копию для редактирования
-                edit_df = filtered_df.copy()
-                
-                # Добавляем колонку для выбора
-                edit_df.insert(0, "Выбрать", False)
-                
-                # Отображаем редактируемую таблицу
-                edited_df = st.data_editor(
-                    edit_df,
-                    use_container_width=True,
-                    hide_index=True,
-                    column_config={
-                        "Выбрать": st.column_config.CheckboxColumn(
-                            "Выбрать",
-                            help="Отметьте заявки для массового управления",
-                            default=False,
-                        ),
-                        "ID": st.column_config.NumberColumn(
-                            "№",
-                            help="Номер заявки",
-                            width="small",
-                        ),
-                        "Статус": st.column_config.TextColumn(
-                            "Статус",
-                            width="small",
-                        ),
-                    },
-                    disabled=["ID", "Дата", "Время", "ФИО студента", "Email", "Общежитие", "Комната", "Тип заявки", "Описание", "Статус"],
-                    key="data_editor"
-                )
-                
-                # Получаем выбранные ID
-                selected_ids = edited_df[edited_df["Выбрать"] == True]["ID"].tolist()
-                
-                if selected_ids:
-                    st.success(f"✅ Выбрано заявок: {len(selected_ids)}")
-                    
-                    col1, col2, col3 = st.columns(3)
-                    
-                    with col1:
-                        if st.button("✅ Выбрать все", use_container_width=True):
-                            # Обновляем все строки через session_state
-                            for idx in edit_df.index:
-                                st.session_state[f"data_editor_{idx}"] = True
-                            st.rerun()
-                    
-                    with col2:
-                        new_status_bulk = st.selectbox(
-                            "Новый статус", 
-                            ["Новая", "В работе", "Выполнена"], 
-                            key="bulk_status_editor"
-                        )
-                        if st.button(f"🔄 Изменить статус ({len(selected_ids)})", use_container_width=True):
-                            success_count = 0
-                            for id in selected_ids:
-                                if update_status_with_notification(id, new_status_bulk):
-                                    success_count += 1
-                            if success_count > 0:
-                                st.success(f"✅ Статус изменен для {success_count} заявок")
-                                time.sleep(1)
-                                st.rerun()
-                            else:
-                                st.error("❌ Ошибка при обновлении статусов")
-                    
-                    with col3:
-                        if st.button(f"🗑️ Удалить ({len(selected_ids)})", use_container_width=True, type="primary"):
-                            st.session_state.show_bulk_delete_confirm_table = True
-                            st.session_state.bulk_delete_ids_table = selected_ids
-                    
-                    # Диалог подтверждения массового удаления
-                    if st.session_state.get('show_bulk_delete_confirm_table', False):
-                        with st.container():
-                            st.warning(f"⚠️ Удалить {len(st.session_state.bulk_delete_ids_table)} заявок?")
-                            col_yes, col_no = st.columns(2)
-                            with col_yes:
-                                if st.button("✅ Да", key="confirm_bulk_table"):
-                                    success_count = 0
-                                    for id in st.session_state.bulk_delete_ids_table:
-                                        success, _ = delete_request(id)
-                                        if success:
-                                            success_count += 1
-                                    if success_count > 0:
-                                        st.success(f"✅ Удалено {success_count} заявок")
-                                        st.session_state.show_bulk_delete_confirm_table = False
-                                        st.session_state.bulk_delete_ids_table = []
-                                        time.sleep(1)
-                                        st.rerun()
-                                    else:
-                                        st.error("❌ Ошибка при удалении")
-                            with col_no:
-                                if st.button("❌ Нет", key="cancel_bulk_table"):
-                                    st.session_state.show_bulk_delete_confirm_table = False
-                                    st.session_state.bulk_delete_ids_table = []
-                                    st.rerun()
+            # Показываем статистику по всем общежитиям
+            st.subheader("📊 Краткая статистика")
+            stats_data = []
+            for dorm in DORMITORIES:
+                dorm_df = load_requests_by_dormitory(dorm)
+                if not dorm_df.empty:
+                    stats_data.append({
+                        "Общежитие": dorm.split('|')[0].strip(),
+                        "Всего": len(dorm_df),
+                        "Новых": len(dorm_df[dorm_df["status"] == "Новая"]),
+                        "В работе": len(dorm_df[dorm_df["status"] == "В работе"]),
+                        "Выполнено": len(dorm_df[dorm_df["status"] == "Выполнена"])
+                    })
                 else:
-                    st.info("ℹ️ Отметьте заявки в колонке 'Выбрать' для массового управления")
-            else:
-                st.warning("Нет заявок для управления")
-            # ===== КОНЕЦ БЛОКА УПРАВЛЕНИЯ =====
+                    stats_data.append({
+                        "Общежитие": dorm.split('|')[0].strip(),
+                        "Всего": 0,
+                        "Новых": 0,
+                        "В работе": 0,
+                        "Выполнено": 0
+                    })
             
-            # Экспорт
-            st.markdown("---")
-            st.subheader("📥 Экспорт данных")
-
-            export_type = st.radio(
-                "Какие заявки экспортировать:",
-                ["Все заявки", "Только отфильтрованные"],
-                horizontal=True
-            )
-
-            export_df = filtered_df if export_type == "Только отфильтрованные" else display_df
-            excel_data = to_excel(export_df)
-            st.download_button(
-                label="📊 Скачать в Excel формате",
-                data=excel_data,
-                file_name=f"Электронные заявки {datetime.now().strftime('%d.%m.%Y %H:%M:%S')}.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                use_container_width=True
-            )
-        
+            stats_df = pd.DataFrame(stats_data)
+            st.dataframe(stats_df, use_container_width=True, hide_index=True)
+            
         else:
-            # Для конкретного общежития показываем все типы на одной странице
+            # Для конкретного общежития показываем заявки с управлением
             st.subheader(st.session_state.selected_dormitory)
-            show_dormitory_requests_by_type(st.session_state.selected_dormitory)
+            show_dormitory_requests_with_control(st.session_state.selected_dormitory)
 
 if __name__ == "__main__":
     main()
