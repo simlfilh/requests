@@ -172,34 +172,37 @@ def to_excel(df):
 
 
 def main():
-    st.title("🔐 Панель сотрудника ЖБУ | Управление электронными заявками")
+    col1, col10 = st.cols([3,1])
+    with col1:
+        st.title("🔐 Панель сотрудника ЖБУ | Управление электронными заявками")
+    
+        if "authenticated" not in st.session_state:
+            st.session_state.authenticated = False
+        if "selected_dormitory" not in st.session_state:
+            st.session_state.selected_dormitory = "Все"
+        if "show_delete_confirm" not in st.session_state:
+            st.session_state.show_delete_confirm = False
+        if "delete_id" not in st.session_state:
+            st.session_state.delete_id = None
+    
+        if not st.session_state.authenticated:
+            with st.form("login_form"):
+                password_input = st.text_input("Введите пароль для доступа", type="password")
+                submitted = st.form_submit_button("Войти")
+    
+                if submitted:
+                    if password_input == PASSWORD:
+                        st.session_state.authenticated = True
+                        st.rerun()
+                    else:
+                        st.error("❌ Неверный пароль!")
+            return
+    with col10:
+        if st.button("🚪 Выйти"):
+            st.session_state.authenticated = False
+            st.rerun()
 
-    if "authenticated" not in st.session_state:
-        st.session_state.authenticated = False
-    if "selected_dormitory" not in st.session_state:
-        st.session_state.selected_dormitory = "Все"
-    if "show_delete_confirm" not in st.session_state:
-        st.session_state.show_delete_confirm = False
-    if "delete_id" not in st.session_state:
-        st.session_state.delete_id = None
-
-    if not st.session_state.authenticated:
-        with st.form("login_form"):
-            password_input = st.text_input("Введите пароль для доступа", type="password")
-            submitted = st.form_submit_button("Войти")
-
-            if submitted:
-                if password_input == PASSWORD:
-                    st.session_state.authenticated = True
-                    st.rerun()
-                else:
-                    st.error("❌ Неверный пароль!")
-        return
-
-    col, col0 = st.columns([2, 1])
-    with col:
-        st.success("✅ Вы вошли как работник ЖБУ")
-        
+    
     cols = st.columns(4)
     dormitories_short = ["Общежитие №2 | Чкаловский пр-т, д. 27", "Общежитие №3 | пр-т Косыгина, д. 19, к. 2", "Общежитие №4 | ул. Воронежская, д. 69", "Общежитие №7 | ул. Воронежская, д. 38"]
     dormitories_full = [
@@ -221,11 +224,6 @@ def main():
         st.info("Все заявки")
     else:
         st.success(f"{st.session_state.selected_dormitory}")
-    
-    with col0:
-        if st.button("🚪 Выйти"):
-            st.session_state.authenticated = False
-            st.rerun()
     
     st.header("📋 Электронные заявки студентов")
     
