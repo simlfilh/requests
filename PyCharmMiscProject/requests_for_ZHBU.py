@@ -389,9 +389,7 @@ def show_dormitory_requests_with_control(dormitory):
                         st.rerun()
                     else:
                         st.error("❌ Ошибка при обновлении статусов")
-            else:
-                st.info("ℹ️ Выберите заявки для изменения статуса")
-            
+                        
             # Экспорт
             excel_data = to_excel(cat_df)
             st.download_button(
