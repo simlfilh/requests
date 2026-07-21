@@ -469,6 +469,16 @@ def main():
             st.session_state.authenticated = False
             st.rerun()
 
+    # Временный код для просмотра названий в БД
+if st.session_state.authenticated:
+    with st.expander("🔍 Названия в БД"):
+        supabase = get_supabase()
+        response = supabase.table('requests').select('dormitory').execute()
+        if response.data:
+            unique = list(set([row['dormitory'] for row in response.data]))
+            for name in unique:
+                st.write(f"- `{name}`")
+
     # Кнопки навигации - используем единые названия
     cols = st.columns(4)
     for i, full_name in enumerate(DORMITORIES):
