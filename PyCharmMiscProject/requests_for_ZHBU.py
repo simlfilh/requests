@@ -507,7 +507,7 @@ def show_dormitory_requests_with_control(dormitory):
             column_config={
                 "Выбрать": st.column_config.CheckboxColumn(
                     "Выбрать",
-                    help="Отметьте заявки для массового управления",
+                    help="Отметьте заявки для редактирования",
                     default=False,
                 ),
                 "Статус": st.column_config.TextColumn(
@@ -616,7 +616,7 @@ def show_dormitory_requests_with_control(dormitory):
                             st.session_state[f"bulk_delete_ids_{dormitory}_{category}"] = []
                             st.rerun()
         else:
-            st.info("ℹ️ Отметьте заявки в колонке 'Выбрать' для массового управления")
+            st.info("ℹ️ Отметьте заявки в колонке 'Выбрать' для редактирования")
         
         # Экспорт для данного типа
         excel_data = to_excel(cat_df)
