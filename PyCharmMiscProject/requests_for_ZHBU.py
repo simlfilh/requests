@@ -187,11 +187,11 @@ def show_statistics():
 
 def show_all_requests_with_control():
     """Функция для отображения всех заявок с управлением"""
-    st.header("📋 Все заявки студентов")
+    st.header("📋 "Электронные заявки студентов")
     
     df_all = load_requests()
     if df_all.empty:
-        st.info("📭 Пока нет ни одной заявки.")
+        st.info("Пока нет ни одной заявки.")
         return
     
     display_df_all = df_all.rename(columns={
