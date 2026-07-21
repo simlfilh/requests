@@ -280,7 +280,7 @@ def show_dormitory_requests_by_type(dormitory):
     types = ["Сантехника", "Электрика", "Плиты", "Уборка", "Другое"]
     
     # Создаем вкладки для каждого типа
-    tabs = st.tabs([f"🔧 {t}" for t in types])
+    tabs = st.tabs([f"{t}" for t in types])
     
     for tab, type_name in zip(tabs, types):
         with tab:
