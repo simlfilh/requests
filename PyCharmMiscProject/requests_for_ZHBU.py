@@ -369,7 +369,7 @@ def show_dormitory_requests_with_control(dormitory):
             st.success(f"✅ Выбрано заявок: {len(selected_ids)}")
             
             # Создаем 4 колонки для компактного расположения
-            col1, col2, col3, col4 = st.columns([1.5, 1, 1, 1])
+            col1, col2 = st.columns([1.5, 1, 1, 1])
             
             with col1:
                 new_status_bulk = st.selectbox(
@@ -378,10 +378,7 @@ def show_dormitory_requests_with_control(dormitory):
                     key=f"bulk_status_{dormitory}_{category}",
                     label_visibility="collapsed"  # Скрываем label
                 )
-                # Добавляем маленькую подпись под селектом
-                st.caption("Новый статус")
             
-            with col2:
                 st.write("")  # Отступ для выравнивания
                 if st.button(f"🔄 Изменить статус", use_container_width=True, key=f"bulk_update_{dormitory}_{category}"):
                     success_count = 0
@@ -398,14 +395,11 @@ def show_dormitory_requests_with_control(dormitory):
                     else:
                         st.error("❌ Ошибка при обновлении статусов")
             
-            with col3:
-                st.write("")  # Отступ для выравнивания
+            with col2:
+            #     st.write("")  # Отступ для выравнивания
                 if st.button(f"🗑️ Удалить", use_container_width=True, key=f"bulk_delete_{dormitory}_{category}", type="primary"):
                     st.session_state[f"show_bulk_delete_confirm_{dormitory}_{category}"] = True
                     st.session_state[f"bulk_delete_ids_{dormitory}_{category}"] = selected_ids
-            
-            with col4:
-                st.write("")  # Пустая колонка для отступа
             
             # Диалог подтверждения массового удаления
             confirm_key = f"show_bulk_delete_confirm_{dormitory}_{category}"
