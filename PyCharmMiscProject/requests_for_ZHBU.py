@@ -187,7 +187,7 @@ def show_statistics():
 
 def show_all_requests_with_control():
     """Функция для отображения всех заявок с управлением"""
-    st.header("📋 "Электронные заявки студентов")
+    st.header("📋 Электронные заявки студентов")
     
     df_all = load_requests()
     if df_all.empty:
