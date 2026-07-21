@@ -271,7 +271,7 @@ def show_dormitory_requests_with_control(dormitory):
         cat_df = display_df[display_df["Тип заявки"] == category]
         
         if cat_df.empty:
-            st.info(f"📭 Нет заявок типа «{category}»")
+            st.info(f"Нет заявок")
             st.markdown("---")
             continue
         
