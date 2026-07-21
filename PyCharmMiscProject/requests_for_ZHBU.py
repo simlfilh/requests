@@ -549,6 +549,16 @@ def show_dormitory_requests_by_type(dormitory):
         )
 
 def main():
+
+    if "show_bulk_delete_confirm" not in st.session_state:
+        st.session_state.show_bulk_delete_confirm = False
+    if "bulk_delete_ids" not in st.session_state:
+        st.session_state.bulk_delete_ids = []
+    if "show_single_delete_confirm" not in st.session_state:
+        st.session_state.show_single_delete_confirm = False
+    if "single_delete_id" not in st.session_state:
+        st.session_state.single_delete_id = None
+        
     # Инициализация session_state
     if "authenticated" not in st.session_state:
         st.session_state.authenticated = False
