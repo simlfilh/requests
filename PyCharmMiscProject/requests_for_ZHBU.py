@@ -210,33 +210,7 @@ def show_statistics():
 
 def show_all_requests():
     """Функция для отображения всех заявок"""
-    st.header("📋 Все заявки студентов")
-    
-    # Стилизованный контейнер
-    with st.container():
-        st.markdown("""
-        <style>
-        .all-requests-container {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            padding: 20px;
-            border-radius: 15px;
-            margin-bottom: 20px;
-        }
-        .all-requests-container h3 {
-            color: white !important;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
-        }
-        .all-requests-container .stDataFrame {
-            background: white;
-            border-radius: 10px;
-            padding: 10px;
-        }
-        </style>
-        """, unsafe_allow_html=True)
-        
-        st.markdown('<div class="all-requests-container">', unsafe_allow_html=True)
-        st.markdown("### 📋 Полный список всех заявок")
-        st.markdown("</div>", unsafe_allow_html=True)
+    st.header("📋 Электронные заявки студентов")
         
         df_all = load_requests()
         if not df_all.empty:
@@ -277,13 +251,13 @@ def show_all_requests():
             # Показываем метрики
             col1, col2, col3, col4 = st.columns(4)
             with col1:
-                st.metric("📊 Всего", len(filtered_all_df))
+                st.metric("Всего", len(filtered_all_df))
             with col2:
-                st.metric("🆕 Новых", len(filtered_all_df[filtered_all_df["Статус"] == "Новая"]))
+                st.metric("Новых", len(filtered_all_df[filtered_all_df["Статус"] == "Новая"]))
             with col3:
-                st.metric("🔧 В работе", len(filtered_all_df[filtered_all_df["Статус"] == "В работе"]))
+                st.metric("В работе", len(filtered_all_df[filtered_all_df["Статус"] == "В работе"]))
             with col4:
-                st.metric("✅ Выполнено", len(filtered_all_df[filtered_all_df["Статус"] == "Выполнена"]))
+                st.metric("Выполнено", len(filtered_all_df[filtered_all_df["Статус"] == "Выполнена"]))
             
             # Отображаем таблицу с цветными статусами
             st.dataframe(
