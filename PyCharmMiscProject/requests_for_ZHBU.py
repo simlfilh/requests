@@ -685,87 +685,111 @@ def main():
                 st.rerun()
 
             st.dataframe(filtered_df, use_container_width=True, hide_index=True)
-            # После st.dataframe(filtered_df, use_container_width=True, hide_index=True)
-
-st.markdown("---")
-st.subheader("✅ Управление заявками")
-
-if not filtered_df.empty:
-    # Создаем копию для редактирования
-    edit_df = filtered_df.copy()
-    
-    # Добавляем колонку для выбора
-    edit_df.insert(0, "Выбрать", False)
-    
-    # Отображаем редактируемую таблицу
-    edited_df = st.data_editor(
-        edit_df,
-        use_container_width=True,
-        hide_index=True,
-        column_config={
-            "Выбрать": st.column_config.CheckboxColumn(
-                "Выбрать",
-                help="Отметьте заявки для массового управления",
-                default=False,
-            ),
-            "ID": st.column_config.NumberColumn(
-                "№",
-                help="Номер заявки",
-                width="small",
-            ),
-            "Статус": st.column_config.TextColumn(
-                "Статус",
-                width="small",
-            ),
-        },
-        disabled=["ID", "Дата", "Время", "ФИО студента", "Email", "Общежитие", "Комната", "Тип заявки", "Описание", "Статус"],
-        key="data_editor"
-    )
-    
-    # Получаем выбранные ID
-    selected_ids = edited_df[edited_df["Выбрать"] == True]["ID"].tolist()
-    
-    if selected_ids:
-        st.success(f"✅ Выбрано заявок: {len(selected_ids)}")
-        
-        col1, col2, col3 = st.columns(3)
-        
-        with col1:
-            if st.button("✅ Выбрать все", use_container_width=True):
-                # Обновляем все строки
-                edited_df["Выбрать"] = True
-                st.rerun()
-        
-        with col2:
-            new_status_bulk = st.selectbox(
-                "Новый статус", 
-                ["Новая", "В работе", "Выполнена"], 
-                key="bulk_status_editor"
-            )
-            if st.button(f"🔄 Изменить статус ({len(selected_ids)})", use_container_width=True):
-                success_count = 0
-                for id in selected_ids:
-                    if update_status_with_notification(id, new_status_bulk):
-                        success_count += 1
-                if success_count > 0:
-                    st.success(f"✅ Статус изменен для {success_count} заявок")
-                    time.sleep(1)
-                    st.rerun()
-        
-        with col3:
-            if st.button(f"🗑️ Удалить ({len(selected_ids)})", use_container_width=True, type="primary"):
-                if st.button("Подтвердить удаление", key="confirm_delete_editor"):
-                    success_count = 0
-                    for id in selected_ids:
-                        success, _ = delete_request(id)
-                        if success:
-                            success_count += 1
-                    if success_count > 0:
-                        st.success(f"✅ Удалено {success_count} заявок")
-                        time.sleep(1)
-                        st.rerun()
-    else:
-        st.info("ℹ️ Отметьте заявки в колонке 'Выбрать' для массового управления")
+            
+            # ===== БЛОК УПРАВЛЕНИЯ С DATA_EDITOR =====
+            st.markdown("---")
+            st.subheader("✅ Управление заявками")
+            
+            if not filtered_df.empty:
+                # Создаем копию для редактирования
+                edit_df = filtered_df.copy()
+                
+                # Добавляем колонку для выбора
+                edit_df.insert(0, "Выбрать", False)
+                
+                # Отображаем редактируемую таблицу
+                edited_df = st.data_editor(
+                    edit_df,
+                    use_container_width=True,
+                    hide_index=True,
+                    column_config={
+                        "Выбрать": st.column_config.CheckboxColumn(
+                            "Выбрать",
+                            help="Отметьте заявки для массового управления",
+                            default=False,
+                        ),
+                        "ID": st.column_config.NumberColumn(
+                            "№",
+                            help="Номер заявки",
+                            width="small",
+                        ),
+                        "Статус": st.column_config.TextColumn(
+                            "Статус",
+                            width="small",
+                        ),
+                    },
+                    disabled=["ID", "Дата", "Время", "ФИО студента", "Email", "Общежитие", "Комната", "Тип заявки", "Описание", "Статус"],
+                    key="data_editor"
+                )
+                
+                # Получаем выбранные ID
+                selected_ids = edited_df[edited_df["Выбрать"] == True]["ID"].tolist()
+                
+                if selected_ids:
+                    st.success(f"✅ Выбрано заявок: {len(selected_ids)}")
+                    
+                    col1, col2, col3 = st.columns(3)
+                    
+                    with col1:
+                        if st.button("✅ Выбрать все", use_container_width=True):
+                            # Обновляем все строки через session_state
+                            for idx in edit_df.index:
+                                st.session_state[f"data_editor_{idx}"] = True
+                            st.rerun()
+                    
+                    with col2:
+                        new_status_bulk = st.selectbox(
+                            "Новый статус", 
+                            ["Новая", "В работе", "Выполнена"], 
+                            key="bulk_status_editor"
+                        )
+                        if st.button(f"🔄 Изменить статус ({len(selected_ids)})", use_container_width=True):
+                            success_count = 0
+                            for id in selected_ids:
+                                if update_status_with_notification(id, new_status_bulk):
+                                    success_count += 1
+                            if success_count > 0:
+                                st.success(f"✅ Статус изменен для {success_count} заявок")
+                                time.sleep(1)
+                                st.rerun()
+                            else:
+                                st.error("❌ Ошибка при обновлении статусов")
+                    
+                    with col3:
+                        if st.button(f"🗑️ Удалить ({len(selected_ids)})", use_container_width=True, type="primary"):
+                            st.session_state.show_bulk_delete_confirm_table = True
+                            st.session_state.bulk_delete_ids_table = selected_ids
+                    
+                    # Диалог подтверждения массового удаления
+                    if st.session_state.get('show_bulk_delete_confirm_table', False):
+                        with st.container():
+                            st.warning(f"⚠️ Удалить {len(st.session_state.bulk_delete_ids_table)} заявок?")
+                            col_yes, col_no = st.columns(2)
+                            with col_yes:
+                                if st.button("✅ Да", key="confirm_bulk_table"):
+                                    success_count = 0
+                                    for id in st.session_state.bulk_delete_ids_table:
+                                        success, _ = delete_request(id)
+                                        if success:
+                                            success_count += 1
+                                    if success_count > 0:
+                                        st.success(f"✅ Удалено {success_count} заявок")
+                                        st.session_state.show_bulk_delete_confirm_table = False
+                                        st.session_state.bulk_delete_ids_table = []
+                                        time.sleep(1)
+                                        st.rerun()
+                                    else:
+                                        st.error("❌ Ошибка при удалении")
+                            with col_no:
+                                if st.button("❌ Нет", key="cancel_bulk_table"):
+                                    st.session_state.show_bulk_delete_confirm_table = False
+                                    st.session_state.bulk_delete_ids_table = []
+                                    st.rerun()
+                else:
+                    st.info("ℹ️ Отметьте заявки в колонке 'Выбрать' для массового управления")
+            else:
+                st.warning("Нет заявок для управления")
+            # ===== КОНЕЦ БЛОКА УПРАВЛЕНИЯ =====
             
             # Экспорт
             st.markdown("---")
