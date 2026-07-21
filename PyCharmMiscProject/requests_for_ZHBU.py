@@ -224,7 +224,7 @@ def main():
             st.session_state.selected_dormitory = "Все"
             st.rerun()
 
-    col_full2 = st.columns(1)[0]
+    col_full2 = st.columns(1)
     with col_full2:
         if st.button("📊 Статистика", use_container_width=True, key="dorm_all"):
             st.session_state.selected_dormitory = "Все"
