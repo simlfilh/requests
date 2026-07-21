@@ -469,7 +469,7 @@ def show_dormitory_requests_with_control(dormitory):
             continue
         
         # Показываем количество заявок данного типа
-        st.caption(f"Всего: {len(cat_df)} заявок")
+        st.caption(f"Количество заявок: {len(cat_df)}")
         
         # Добавляем колонку для выбора
         edit_df = cat_df.copy()
