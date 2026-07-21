@@ -199,36 +199,28 @@ def main():
     col, col0 = st.columns([2, 1])
     with col:
         st.success("✅ Вы вошли как работник ЖБУ")
-        st.subheader("🏠 Фильтр по общежитиям")
-
-        # Создаем 4 кнопки в ряд
-        cols = st.columns(4)
-        dormitories_short = ["№2", "№3", "№4", "№7"]
-        dormitories_full = [
+        
+    cols = st.columns(4)
+    dormitories_short = ["Общежитие №2", "№3", "№4", "№7"]
+    dormitories_full = [
             "Общежитие №2 | Чкаловский пр-т, д. 27",
             "Общежитие №3 | пр-т Косыгина, д. 19, к. 2",
             "Общежитие №4 | ул. Воронежская, д. 69",
             "Общежитие №7 | ул. Воронежская, д. 38"
         ]
         
-        for col, short, full in zip(cols, dormitories_short, dormitories_full):
-            with col:
-                if st.button(f"🏢 {short}", use_container_width=True):
-                    st.session_state.selected_dormitory = full
-                    st.rerun()
-        
-        # Кнопка для сброса фильтра
-        if st.button("📋 Все заявки", use_container_width=False):
-            st.session_state.selected_dormitory = "Все"
-            st.rerun()
-        
-        st.divider()
-        
-        # Показываем текущий фильтр
-        if st.session_state.selected_dormitory == "Все":
-            st.info("Показаны все заявки")
-        else:
-            st.success(f"Показаны заявки: {st.session_state.selected_dormitory}")
+    for col, short, full in zip(cols, dormitories_short, dormitories_full):
+        with col:
+            if st.button(f"🏢 {short}", use_container_width=True):
+                st.session_state.selected_dormitory = full
+                st.rerun()
+                    
+    st.divider()
+
+    if st.session_state.selected_dormitory == "Все":
+        st.info("Все заявки")
+    else:
+        st.success(f"{st.session_state.selected_dormitory}")
     
     with col0:
         if st.button("🚪 Выйти"):
