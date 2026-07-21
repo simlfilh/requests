@@ -403,7 +403,7 @@ def show_dormitory_requests_with_control(dormitory):
     
     today = datetime.now().date()
     if date_filter == "Сегодня":
-        filtered_df = filtered_df[filter_df["date"] == today.strftime("%Y-%m-%d")]
+        filtered_df = filtered_df[filtered_df["date"] == today.strftime("%Y-%m-%d")]
     elif date_filter == "Вчера":
         yesterday = today - timedelta(days=1)
         filtered_df = filtered_df[filtered_df["date"] == yesterday.strftime("%Y-%m-%d")]
@@ -434,14 +434,6 @@ def show_dormitory_requests_with_control(dormitory):
         "status": "Статус"
     })
     
-    # ---------- Показываем все уникальные типы для отладки ----------
-    st.subheader("🔍 Отладка: все типы заявок в базе данных")
-    if not display_df.empty:
-        unique_types = display_df["Тип заявки"].unique().tolist()
-        st.write(f"Найдены типы: {unique_types}")
-        st.write(f"Всего заявок: {len(display_df)}")
-    st.markdown("---")
-    
     # ---------- Метрики ----------
     col1, col2, col3, col4 = st.columns(4)
     with col1:
@@ -455,36 +447,27 @@ def show_dormitory_requests_with_control(dormitory):
     
     st.markdown("---")
     
+    # ---------- Словарь соответствия типов ----------
+    type_names = {
+        "Сантехника": "🔧 Сантехника",
+        "Электрика": "⚡ Электрика",
+        "Плиты": "🍵 Плиты",
+        "Уборка": "🧹 Уборка",
+        "Вопрос / Другое": "❓ Вопрос / Другое"
+    }
+    
     # ---------- Разделение по типам ----------
-    # Получаем все уникальные типы из данных
-    if not display_df.empty:
-        # Получаем реальные типы из базы данных
-        actual_types = display_df["Тип заявки"].unique().tolist()
-        # Добавляем стандартные типы, если их нет в данных
-        standard_types = ["Сантехник", "Электрик", "Плиты", "Уборка", "Другое"]
-        
-        # Создаем список для отображения: сначала стандартные, потом остальные
-        types_to_show = []
-        for t in standard_types:
-            if t in actual_types:
-                types_to_show.append(t)
-        # Добавляем типы, которых нет в стандартных
-        for t in actual_types:
-            if t not in standard_types and t not in types_to_show:
-                types_to_show.append(t)
-        
-        # Если нет ни одного типа, используем стандартные
-        if not types_to_show:
-            types_to_show = standard_types
-    else:
-        types_to_show = ["Сантехник", "Электрик", "Плиты", "Уборка", "Другое"]
+    # Создаем список типов для отображения в заданном порядке
+    types_to_show = ["Сантехника", "Электрика", "Плиты", "Уборка", "Вопрос / Другое"]
     
     # Для каждого типа создаём отдельную таблицу
     for category in types_to_show:
-        st.subheader(f"🔧 {category}")
+        # Получаем отображаемое название с иконкой
+        display_name = type_names.get(category, category)
+        st.subheader(display_name)
         
-        # Фильтруем данные по типу (с учетом возможных различий в регистре)
-        cat_df = display_df[display_df["Тип заявки"].str.strip() == category]
+        # Фильтруем данные по типу (точное совпадение)
+        cat_df = display_df[display_df["Тип заявки"] == category]
         
         if cat_df.empty:
             st.info(f"📭 Нет заявок типа «{category}»")
