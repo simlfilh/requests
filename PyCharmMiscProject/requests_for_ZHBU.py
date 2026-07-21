@@ -323,8 +323,8 @@ def render_type_table(df, type_name, title_prefix=""):
         key=f"{title_prefix}_export_{type_name}"
     )
 
-def show_all_requests_with_control():
-    """Функция для отображения всех заявок с разделением по типам"""
+def show_all_requests():
+    """Функция для отображения всех заявок"""
     st.header("📋 Все заявки студентов")
     
     df_all = load_requests()
@@ -332,6 +332,7 @@ def show_all_requests_with_control():
         st.info("📭 Пока нет ни одной заявки.")
         return
     
+    # Переименовываем колонки
     display_df_all = df_all.rename(columns={
         "id": "ID",
         "date": "Дата",
@@ -345,58 +346,8 @@ def show_all_requests_with_control():
         "status": "Статус"
     })
     
-    # Добавляем фильтры
-    st.subheader("🔍 Фильтры")
-    col1, col2 = st.columns(2)
-    with col1:
-        status_filter_all = st.selectbox("Статус", ["Все", "Новая", "В работе", "Выполнена"], key="status_all")
-    with col2:
-        date_options_all = ["Все", "Сегодня", "Вчера", "Выбрать дату", "Выбрать период"]
-        date_filter_all = st.selectbox("Период", date_options_all, key="date_all")
-    
-    # Применяем фильтры
-    filtered_df = display_df_all.copy()
-    
-    if status_filter_all != "Все":
-        filtered_df = filtered_df[filtered_df["Статус"] == status_filter_all]
-    
-    today = datetime.now().date()
-    
-    if date_filter_all == "Сегодня":
-        filtered_df = filtered_df[filtered_df["Дата"] == today.strftime("%Y-%m-%d")]
-    elif date_filter_all == "Вчера":
-        yesterday = today - timedelta(days=1)
-        filtered_df = filtered_df[filtered_df["Дата"] == yesterday.strftime("%Y-%m-%d")]
-    elif date_filter_all == "Выбрать дату":
-        selected_date = st.date_input("Выберите дату", value=today, key="date_picker_all")
-        filtered_df = filtered_df[filtered_df["Дата"] == selected_date.strftime("%Y-%m-%d")]
-    elif date_filter_all == "Выбрать период":
-        col1, col2 = st.columns(2)
-        with col1:
-            start_date = st.date_input("Начальная дата", value=today - timedelta(days=7), key="start_date_all")
-        with col2:
-            end_date = st.date_input("Конечная дата", value=today, key="end_date_all")
-        filtered_df["Дата"] = pd.to_datetime(filtered_df["Дата"])
-        filtered_df = filtered_df[(filtered_df["Дата"] >= pd.Timestamp(start_date)) & (filtered_df["Дата"] <= pd.Timestamp(end_date))]
-        filtered_df["Дата"] = filtered_df["Дата"].dt.strftime("%Y-%m-%d")
-    
-    # Показываем общие метрики
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        st.metric("Всего", len(filtered_df))
-    with col2:
-        st.metric("Новых", len(filtered_df[filtered_df["Статус"] == "Новая"]))
-    with col3:
-        st.metric("В работе", len(filtered_df[filtered_df["Статус"] == "В работе"]))
-    with col4:
-        st.metric("Выполнено", len(filtered_df[filtered_df["Статус"] == "Выполнена"]))
-    
-    st.markdown("---")
-    
-    # Разделяем по типам
-    for type_name in TYPES:
-        render_type_table(filtered_df, type_name, "all")
-        st.markdown("---")
+    # Просто таблица
+    st.dataframe(display_df_all, use_container_width=True, hide_index=True)
 
 def show_dormitory_requests_with_control(dormitory):
     """Функция для отображения заявок конкретного общежития с разделением по типам"""
@@ -541,7 +492,7 @@ def main():
     
     # Отображение всех заявок
     elif st.session_state.show_all_requests:
-        show_all_requests_with_control()
+        show_all_requests()
         st.divider()
     
     # Основная таблица с заявками (по умолчанию)
