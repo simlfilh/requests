@@ -242,6 +242,7 @@ def show_all_requests():
                 end_date = st.date_input("Конечная дата", value=today, key="end_date_all")
             filtered_all_df["Дата"] = pd.to_datetime(filtered_all_df["Дата"])
             filtered_all_df = filtered_all_df[(filtered_all_df["Дата"] >= pd.Timestamp(start_date)) & (filtered_all_df["Дата"] <= pd.Timestamp(end_date))]
+            filtered_all_df["Дата"] = filtered_all_df["Дата"].dt.strftime("%Y-%m-%d")
         
         # Показываем метрики
         col1, col2, col3, col4 = st.columns(4)
@@ -310,160 +311,6 @@ def show_dormitory_requests_by_type(dormitory):
     
     # Применяем фильтры
     filtered_df = df.copy()
-
-    # После отображения таблицы filtered_df
-    
-    st.markdown("---")
-    st.subheader("✏️ Массовое управление заявками")
-    
-    if not filtered_df.empty:
-        # Добавляем колонку с чекбоксами
-        st.info("✅ Отметьте заявки, к которым нужно применить действие")
-        
-        # Создаем копию DataFrame с чекбоксами
-        df_with_checkboxes = filtered_df.copy()
-        
-        # Добавляем колонку для чекбоксов
-        checkboxes = []
-        for idx in df_with_checkboxes.index:
-            checkbox = st.checkbox(
-                f"Выбрать №{df_with_checkboxes.loc[idx, 'ID']}", 
-                key=f"checkbox_{idx}",
-                value=False
-            )
-            checkboxes.append(checkbox)
-        
-        df_with_checkboxes['Выбрать'] = checkboxes
-        
-        # Получаем выбранные ID
-        selected_ids = df_with_checkboxes[df_with_checkboxes['Выбрать'] == True]['ID'].tolist()
-        
-        # Показываем количество выбранных
-        if selected_ids:
-            st.success(f"✅ Выбрано заявок: {len(selected_ids)}")
-            
-            # Кнопки для массовых действий
-            col1, col2, col3, col4 = st.columns(4)
-            
-            with col1:
-                # Выбрать все
-                if st.button("✅ Выбрать все", use_container_width=True):
-                    for idx in df_with_checkboxes.index:
-                        st.session_state[f"checkbox_{idx}"] = True
-                    st.rerun()
-            
-            with col2:
-                # Снять все
-                if st.button("❌ Снять все", use_container_width=True):
-                    for idx in df_with_checkboxes.index:
-                        st.session_state[f"checkbox_{idx}"] = False
-                    st.rerun()
-            
-            with col3:
-                # Массовое изменение статуса
-                new_status_bulk = st.selectbox(
-                    "Новый статус", 
-                    ["Новая", "В работе", "Выполнена"], 
-                    key="bulk_status"
-                )
-                if st.button(f"🔄 Изменить статус ({len(selected_ids)} заявок)", use_container_width=True):
-                    success_count = 0
-                    for id in selected_ids:
-                        if update_status_with_notification(id, new_status_bulk):
-                            success_count += 1
-                    if success_count > 0:
-                        st.success(f"✅ Статус изменен для {success_count} заявок")
-                        time.sleep(1)
-                        st.rerun()
-                    else:
-                        st.error("❌ Ошибка при обновлении статусов")
-            
-            with col4:
-                # Массовое удаление
-                if st.button(f"🗑️ Удалить выбранные ({len(selected_ids)} заявок)", use_container_width=True, type="primary"):
-                    st.session_state.show_bulk_delete_confirm = True
-                    st.session_state.bulk_delete_ids = selected_ids
-            
-            # Диалог подтверждения массового удаления
-            if st.session_state.get('show_bulk_delete_confirm', False):
-                with st.container():
-                    st.warning(f"⚠️ Вы уверены, что хотите удалить {len(st.session_state.bulk_delete_ids)} заявок? Это действие невозможно отменить.")
-                    
-                    col_yes, col_no = st.columns(2)
-                    with col_yes:
-                        if st.button("✅ Да, удалить все", key="confirm_bulk_delete"):
-                            success_count = 0
-                            for id in st.session_state.bulk_delete_ids:
-                                success, _ = delete_request(id)
-                                if success:
-                                    success_count += 1
-                            if success_count > 0:
-                                st.success(f"✅ Удалено {success_count} заявок")
-                                st.session_state.show_bulk_delete_confirm = False
-                                st.session_state.bulk_delete_ids = []
-                                time.sleep(1)
-                                st.rerun()
-                            else:
-                                st.error("❌ Ошибка при удалении")
-                    with col_no:
-                        if st.button("❌ Отмена", key="cancel_bulk_delete"):
-                            st.session_state.show_bulk_delete_confirm = False
-                            st.session_state.bulk_delete_ids = []
-                            st.rerun()
-        
-        else:
-            st.info("ℹ️ Выберите заявки для выполнения действий")
-        
-        # Индивидуальное управление (оставляем как было)
-        st.markdown("---")
-        st.subheader("✏️ Индивидуальное управление заявкой")
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            selected_id = st.selectbox("Выберите № заявки", filtered_df["ID"].tolist(), key="single_select_id")
-        with col2:
-            new_status_single = st.selectbox("Новый статус", ["Новая", "В работе", "Выполнена"], key="single_status")
-        
-        col3, col4 = st.columns(2)
-        with col3:
-            if st.button("🔄 Изменить статус", key="single_update_btn"):
-                if update_status_with_notification(selected_id, new_status_single):
-                    st.success(f"✅ Статус заявки #{selected_id} изменён на '{new_status_single}'")
-                    time.sleep(1)
-                    st.rerun()
-                else:
-                    st.error("❌ Ошибка при обновлении статуса")
-        
-        with col4:
-            if st.button("🗑️ Удалить заявку", key="single_delete_btn"):
-                st.session_state.show_single_delete_confirm = True
-                st.session_state.single_delete_id = selected_id
-        
-        # Диалог подтверждения индивидуального удаления
-        if st.session_state.get('show_single_delete_confirm', False):
-            with st.container():
-                st.warning(f"⚠️ Вы уверены, что хотите удалить заявку №{st.session_state.single_delete_id}?")
-                
-                col_yes, col_no = st.columns(2)
-                with col_yes:
-                    if st.button("✅ Удалить", key="confirm_single_delete"):
-                        success, message = delete_request(st.session_state.single_delete_id)
-                        if success:
-                            st.success(f"✅ {message}")
-                            st.session_state.show_single_delete_confirm = False
-                            st.session_state.single_delete_id = None
-                            time.sleep(1)
-                            st.rerun()
-                        else:
-                            st.error(f"❌ {message}")
-                with col_no:
-                    if st.button("❌ Отмена", key="cancel_single_delete"):
-                        st.session_state.show_single_delete_confirm = False
-                        st.session_state.single_delete_id = None
-                        st.rerun()
-    
-    else:
-        st.warning("Нет заявок для управления")
     
     if status_filter != "Все":
         filtered_df = filtered_df[filtered_df["status"] == status_filter]
@@ -487,6 +334,7 @@ def show_dormitory_requests_by_type(dormitory):
             end_date = st.date_input("Конечная дата", value=today, key="end_date_dorm")
         filtered_df["date"] = pd.to_datetime(filtered_df["date"])
         filtered_df = filtered_df[(filtered_df["date"] >= pd.Timestamp(start_date)) & (filtered_df["date"] <= pd.Timestamp(end_date))]
+        filtered_df["date"] = filtered_df["date"].dt.strftime("%Y-%m-%d")
     
     # Список типов заявок с иконками
     types_with_icons = {
@@ -547,18 +395,165 @@ def show_dormitory_requests_by_type(dormitory):
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             key=f"export_{dormitory}_{type_name}"
         )
+    
+    # Блок массового управления
+    st.markdown("---")
+    st.subheader("✏️ Массовое управление заявками")
+    
+    if not filtered_df.empty:
+        # Создаем DataFrame для отображения с чекбоксами
+        display_filtered = filtered_df.rename(columns={
+            "id": "ID",
+            "date": "Дата",
+            "time": "Время",
+            "fio": "ФИО студента",
+            "email": "Email",
+            "dormitory": "Общежитие",
+            "room": "Комната",
+            "type": "Тип заявки",
+            "description": "Описание",
+            "status": "Статус"
+        })
+        
+        st.info("✅ Отметьте заявки, к которым нужно применить действие")
+        
+        # Добавляем колонку с чекбоксами
+        checkboxes = []
+        for idx in display_filtered.index:
+            checkbox = st.checkbox(
+                f"Выбрать №{display_filtered.loc[idx, 'ID']}", 
+                key=f"checkbox_dorm_{idx}",
+                value=False
+            )
+            checkboxes.append(checkbox)
+        
+        display_filtered['Выбрать'] = checkboxes
+        
+        # Получаем выбранные ID
+        selected_ids = display_filtered[display_filtered['Выбрать'] == True]['ID'].tolist()
+        
+        # Показываем количество выбранных
+        if selected_ids:
+            st.success(f"✅ Выбрано заявок: {len(selected_ids)}")
+            
+            # Кнопки для массовых действий
+            col1, col2, col3, col4 = st.columns(4)
+            
+            with col1:
+                if st.button("✅ Выбрать все", use_container_width=True, key="select_all_dorm"):
+                    for idx in display_filtered.index:
+                        st.session_state[f"checkbox_dorm_{idx}"] = True
+                    st.rerun()
+            
+            with col2:
+                if st.button("❌ Снять все", use_container_width=True, key="deselect_all_dorm"):
+                    for idx in display_filtered.index:
+                        st.session_state[f"checkbox_dorm_{idx}"] = False
+                    st.rerun()
+            
+            with col3:
+                new_status_bulk = st.selectbox(
+                    "Новый статус", 
+                    ["Новая", "В работе", "Выполнена"], 
+                    key="bulk_status_dorm"
+                )
+                if st.button(f"🔄 Изменить статус ({len(selected_ids)} заявок)", use_container_width=True, key="bulk_update_dorm"):
+                    success_count = 0
+                    for id in selected_ids:
+                        if update_status_with_notification(id, new_status_bulk):
+                            success_count += 1
+                    if success_count > 0:
+                        st.success(f"✅ Статус изменен для {success_count} заявок")
+                        time.sleep(1)
+                        st.rerun()
+                    else:
+                        st.error("❌ Ошибка при обновлении статусов")
+            
+            with col4:
+                if st.button(f"🗑️ Удалить выбранные ({len(selected_ids)} заявок)", use_container_width=True, key="bulk_delete_dorm", type="primary"):
+                    st.session_state.show_bulk_delete_confirm = True
+                    st.session_state.bulk_delete_ids = selected_ids
+            
+            # Диалог подтверждения массового удаления
+            if st.session_state.get('show_bulk_delete_confirm', False):
+                with st.container():
+                    st.warning(f"⚠️ Вы уверены, что хотите удалить {len(st.session_state.bulk_delete_ids)} заявок? Это действие невозможно отменить.")
+                    
+                    col_yes, col_no = st.columns(2)
+                    with col_yes:
+                        if st.button("✅ Да, удалить все", key="confirm_bulk_delete_dorm"):
+                            success_count = 0
+                            for id in st.session_state.bulk_delete_ids:
+                                success, _ = delete_request(id)
+                                if success:
+                                    success_count += 1
+                            if success_count > 0:
+                                st.success(f"✅ Удалено {success_count} заявок")
+                                st.session_state.show_bulk_delete_confirm = False
+                                st.session_state.bulk_delete_ids = []
+                                time.sleep(1)
+                                st.rerun()
+                            else:
+                                st.error("❌ Ошибка при удалении")
+                    with col_no:
+                        if st.button("❌ Отмена", key="cancel_bulk_delete_dorm"):
+                            st.session_state.show_bulk_delete_confirm = False
+                            st.session_state.bulk_delete_ids = []
+                            st.rerun()
+        else:
+            st.info("ℹ️ Выберите заявки для выполнения действий")
+        
+        # Индивидуальное управление
+        st.markdown("---")
+        st.subheader("✏️ Индивидуальное управление заявкой")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            selected_id = st.selectbox("Выберите № заявки", display_filtered["ID"].tolist(), key="single_select_id_dorm")
+        with col2:
+            new_status_single = st.selectbox("Новый статус", ["Новая", "В работе", "Выполнена"], key="single_status_dorm")
+        
+        col3, col4 = st.columns(2)
+        with col3:
+            if st.button("🔄 Изменить статус", key="single_update_dorm"):
+                if update_status_with_notification(selected_id, new_status_single):
+                    st.success(f"✅ Статус заявки #{selected_id} изменён на '{new_status_single}'")
+                    time.sleep(1)
+                    st.rerun()
+                else:
+                    st.error("❌ Ошибка при обновлении статуса")
+        
+        with col4:
+            if st.button("🗑️ Удалить заявку", key="single_delete_dorm"):
+                st.session_state.show_single_delete_confirm = True
+                st.session_state.single_delete_id = selected_id
+        
+        # Диалог подтверждения индивидуального удаления
+        if st.session_state.get('show_single_delete_confirm', False):
+            with st.container():
+                st.warning(f"⚠️ Вы уверены, что хотите удалить заявку №{st.session_state.single_delete_id}?")
+                
+                col_yes, col_no = st.columns(2)
+                with col_yes:
+                    if st.button("✅ Удалить", key="confirm_single_delete_dorm"):
+                        success, message = delete_request(st.session_state.single_delete_id)
+                        if success:
+                            st.success(f"✅ {message}")
+                            st.session_state.show_single_delete_confirm = False
+                            st.session_state.single_delete_id = None
+                            time.sleep(1)
+                            st.rerun()
+                        else:
+                            st.error(f"❌ {message}")
+                with col_no:
+                    if st.button("❌ Отмена", key="cancel_single_delete_dorm"):
+                        st.session_state.show_single_delete_confirm = False
+                        st.session_state.single_delete_id = None
+                        st.rerun()
+    else:
+        st.warning("Нет заявок для управления")
 
 def main():
-
-    if "show_bulk_delete_confirm" not in st.session_state:
-        st.session_state.show_bulk_delete_confirm = False
-    if "bulk_delete_ids" not in st.session_state:
-        st.session_state.bulk_delete_ids = []
-    if "show_single_delete_confirm" not in st.session_state:
-        st.session_state.show_single_delete_confirm = False
-    if "single_delete_id" not in st.session_state:
-        st.session_state.single_delete_id = None
-        
     # Инициализация session_state
     if "authenticated" not in st.session_state:
         st.session_state.authenticated = False
@@ -572,6 +567,14 @@ def main():
         st.session_state.show_stats = False
     if "show_all_requests" not in st.session_state:
         st.session_state.show_all_requests = False
+    if "show_bulk_delete_confirm" not in st.session_state:
+        st.session_state.show_bulk_delete_confirm = False
+    if "bulk_delete_ids" not in st.session_state:
+        st.session_state.bulk_delete_ids = []
+    if "show_single_delete_confirm" not in st.session_state:
+        st.session_state.show_single_delete_confirm = False
+    if "single_delete_id" not in st.session_state:
+        st.session_state.single_delete_id = None
 
     # Шапка и аутентификация
     col1, col2 = st.columns([6, 1])
@@ -698,6 +701,7 @@ def main():
                     end_date = st.date_input("Конечная дата", value=today)
                 filtered_df["Дата"] = pd.to_datetime(filtered_df["Дата"])
                 filtered_df = filtered_df[(filtered_df["Дата"] >= pd.Timestamp(start_date)) & (filtered_df["Дата"] <= pd.Timestamp(end_date))]
+                filtered_df["Дата"] = filtered_df["Дата"].dt.strftime("%Y-%m-%d")
 
             # Метрики
             col1, col2, col3, col4 = st.columns(4)
