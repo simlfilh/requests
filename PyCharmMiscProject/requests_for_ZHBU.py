@@ -172,7 +172,7 @@ def to_excel(df):
 
 
 def main():
-    col1, col2 = st.columns([4, 1])
+    col1, col2 = st.columns([5, 1])
     with col1:
         st.title("🔐 Панель сотрудника ЖБУ | Управление электронными заявками")
     
