@@ -404,7 +404,7 @@ def show_dormitory_requests_with_control(dormitory):
         confirm_key = f"show_bulk_delete_confirm_{dormitory}_{category}"
         if st.session_state.get(confirm_key, False):
             with st.container():
-                col_yes, col_no, col_z = st.columns([1, 1, 6])
+                сol_z0, col_yes, col_no, col_z1 = st.columns([1, 1, 1, 6])
                 with col_yes:
                     if st.button("✅ Да", key=f"confirm_bulk_{dormitory}_{category}"):
                         success_count = 0
