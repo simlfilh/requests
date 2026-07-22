@@ -40,6 +40,10 @@ def load_requests():
     else:
         return pd.DataFrame()
 
+@st.cache_data(ttl=5)  # Кэш живет 5 секунд
+def load_requests_cached():
+    return load_requests()
+
 def load_requests_by_dormitory(dormitory):
     supabase = get_supabase()
     response = supabase.table('requests').select('*').eq('dormitory', dormitory).order('id', desc=False).execute()
@@ -47,6 +51,10 @@ def load_requests_by_dormitory(dormitory):
         return pd.DataFrame(response.data)
     else:
         return pd.DataFrame()
+
+@st.cache_data(ttl=5)
+def load_requests_by_dormitory_cached(dormitory):
+    return load_requests_by_dormitory(dormitory)
 
 def delete_request(request_id):
     try:
@@ -164,7 +172,7 @@ def show_statistics():
     
     stats_data = []
     for dorm in DORMITORIES:
-        dorm_df = load_requests_by_dormitory(dorm)
+        dorm_df = load_requests_by_dormitory_cached(dorm)
         if not dorm_df.empty:
             stats_data.append({
                 "Общежитие": dorm.split('|')[0].strip(),
@@ -568,7 +576,7 @@ def show_all_requests_with_control():
     """Функция для отображения всех заявок с управлением"""
     st.header("📋 Все заявки")
     
-    df_all = load_requests()
+    df_all = load_requests_cached()
     if df_all.empty:
         st.info("Пока нет ни одной заявки.")
         return
