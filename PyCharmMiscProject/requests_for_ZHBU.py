@@ -407,7 +407,7 @@ def show_dormitory_requests_with_control(dormitory):
                 st.warning(f"⚠️ Удалить {len(st.session_state[f'bulk_delete_ids_{dormitory}_{category}'])} заявок?")
                 
                 # Создаем колонки с ограниченной шириной
-                col_yes, col_no, col_1, col2 = st.columns([1, 1, 3, 3])
+                col_yes, col_no, col_1, col2 = st.columns(4)
                 with col_yes:
                     if st.button("✅ Да", use_container_width=True, key=f"confirm_bulk_{dormitory}_{category}"):
                         success_count = 0
