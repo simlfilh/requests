@@ -53,7 +53,7 @@ def save_request(data):
         "type": data["type"],
         "description": data["description"],
         "status": "Новая",
-        "is_anonymous": data.get("is_anonymous", False)  # Добавляем поле для анонимности
+        "is_anonymous": data.get("is_anonymous", False)
     }).execute()
     if result.data:
         return result.data[0]['id']
@@ -137,7 +137,6 @@ def send_notification_to_workers(student_name, student_email, student_room, requ
     
     subject = f"🔔 НОВАЯ ЗАЯВКА №{request_id}"
     
-    # Если заявка анонимная, скрываем личные данные
     if is_anonymous:
         body = f"""
 🏠 {dormitory}
@@ -168,7 +167,6 @@ def send_notification_to_workers(student_name, student_email, student_room, requ
 
 Зайдите в панель управления ЖБУ для обработки заявки.
 """
-    
     for worker_email in WORKER_EMAILS:
         send_email(worker_email, subject, body)
     return True
@@ -190,28 +188,25 @@ def main():
     with tab1:
         st.markdown("Заполните форму ниже, чтобы оставить заявку на ремонт.")
         
-        # Добавляем информационное сообщение об анонимности
-        st.info("💡 **Вы можете подать заявку анонимно.** Для этого отметьте чекбокс ниже. В этом случае ваши ФИО и Email не будут переданы сотрудникам ЖБУ, но для связи с вами потребуется указать комнату.")
+        # Информационное сообщение об анонимности
+        st.info("""
+        📌 **Важно:** 
+        - Поля **ФИО** и **Email** можно **НЕ заполнять**, если вы хотите остаться анонимным
+        - Для анонимных заявок уведомления на почту не отправляются
+        - Обязательны для заполнения: **Общежитие**, **Номер комнаты** и **Описание проблемы**
+        """)
         
         with st.form("student_form"):
-            # Чекбокс для анонимной заявки
-            is_anonymous = st.checkbox("🙈 Анонимная заявка", 
-                                      help="При анонимной заявке ваши ФИО и Email не будут видны сотрудникам ЖБУ. Уведомления на почту отправляться не будут.")
-            
             # Поля для заполнения заявки студентом
-            if is_anonymous:
-                fio = st.text_input("Ваше ФИО (опционально)", 
-                                   placeholder="Можно не указывать",
-                                   help="При анонимной заявке поле необязательно")
-                email = st.text_input("Email для связи (опционально)", 
-                                     placeholder="Можно не указывать",
-                                     help="При анонимной заявке поле необязательно")
-                st.caption("🔒 При анонимной заявке ваши личные данные не будут переданы сотрудникам ЖБУ")
-            else:
-                fio = st.text_input("Ваше ФИО *")
-                email = st.text_input("Email для связи *", 
-                                     placeholder="example@mail.ru",
-                                     help="На этот email придет подтверждение заявки")
+            fio = st.text_input("Ваше ФИО (необязательно)", 
+                              placeholder="Можно не указывать для анонимности")
+            
+            email = st.text_input("Email для связи (необязательно)", 
+                                placeholder="Можно не указывать для анонимности")
+            
+            # Предупреждение если email указан но невалидный
+            if email and not validate_email(email):
+                st.warning("⚠️ Введите корректный email адрес или оставьте поле пустым для анонимности")
             
             dormitory = st.selectbox("Выберите общежитие *", DORMITORIES)
             
@@ -233,24 +228,17 @@ def main():
 
             # Проверка ошибок при заполнении формы заявки
             if submitted:
-                # Проверяем обязательные поля с учетом анонимности
+                # Проверяем только обязательные поля
                 errors = []
                 
                 if not room:
                     errors.append("Номер комнаты")
                 if not description:
                     errors.append("Описание проблемы")
-                if not dormitory:
-                    errors.append("Общежитие")
-                    
-                # Для неанонимных заявок проверяем ФИО и Email
-                if not is_anonymous:
-                    if not fio:
-                        errors.append("ФИО")
-                    if not email:
-                        errors.append("Email")
-                    elif email and not validate_email(email):
-                        errors.append("Некорректный email адрес")
+                
+                # Если email указан, проверяем его корректность
+                if email and not validate_email(email):
+                    errors.append("Некорректный email адрес")
                 
                 if errors:
                     st.error(f"❌ Пожалуйста, заполните обязательные поля: {', '.join(errors)}")
@@ -259,17 +247,16 @@ def main():
                     utc_now = datetime.now(timezone.utc)
                     local_now = utc_now + timedelta(hours=3)
                     
-                    # Подготовка данных для анонимной заявки
+                    # Определяем, анонимная ли заявка
+                    is_anonymous = not fio and not email
+                    
+                    # Подготовка данных
                     if is_anonymous:
-                        # Для анонимных заявок используем заглушки
-                        fio_for_db = "Аноним" if not fio else fio
-                        email_for_db = "anonymous@dorm.ru" if not email else email
-                        # Если пользователь указал email, все равно не отправляем уведомления для анонимности
-                        actual_email = email if email else None
+                        fio_for_db = "Аноним"
+                        email_for_db = "anonymous@dorm.ru"
                     else:
-                        fio_for_db = fio
-                        email_for_db = email
-                        actual_email = email
+                        fio_for_db = fio if fio else "Не указано"
+                        email_for_db = email if email else "no-email@dorm.ru"
                     
                     request_data = {
                         "date": local_now.strftime("%Y-%m-%d"),
@@ -289,11 +276,11 @@ def main():
 
                         # Если заявка сохранилась, то...
                         if new_id:
-                            # Отправляем уведомления только для неанонимных заявок
-                            if not is_anonymous and actual_email:
-                                send_confirmation_to_student(actual_email, fio, new_id, description, dormitory)
+                            # Отправляем уведомления только если указан email
+                            if email and validate_email(email) and not is_anonymous:
+                                send_confirmation_to_student(email, fio_for_db, new_id, description, dormitory)
                             
-                            # Уведомление сотрудникам (с анонимными данными если нужно)
+                            # Уведомление сотрудникам
                             send_notification_to_workers(
                                 fio_for_db, 
                                 email_for_db, 
@@ -307,10 +294,13 @@ def main():
 
                             # Всплывающее окно при успешной отправке заявки
                             if is_anonymous:
-                                st.success(f"✅ Анонимная заявка №{new_id} успешно отправлена! Статус заявки можно проверить в разделе 'Управление заявками'.")
-                                st.info("ℹ️ Для анонимных заявок уведомления на почту не отправляются. Проверяйте статус заявки самостоятельно.")
+                                st.success(f"✅ Анонимная заявка №{new_id} успешно отправлена!")
+                                st.info("ℹ️ Вы не указали ФИО и Email, поэтому уведомления не будут отправлены. Статус заявки можно проверить в разделе 'Управление заявками'.")
                             else:
-                                st.success(f"✅ Заявка №{new_id} успешно отправлена! Подтверждение придет на вашу почту.")
+                                if email and validate_email(email):
+                                    st.success(f"✅ Заявка №{new_id} успешно отправлена! Подтверждение придет на вашу почту.")
+                                else:
+                                    st.success(f"✅ Заявка №{new_id} успешно отправлена!")
                         else:
                             st.error("❌ Ошибка при сохранении заявки. Попробуйте еще раз.")
                     except Exception as e:
@@ -321,8 +311,7 @@ def main():
         st.markdown("### Удаление заявки")
         st.markdown("Введите ваш email и ID заявки, чтобы удалить её")
         
-        # Добавляем информацию об анонимных заявках
-        st.info("💡 **Для анонимных заявок удаление невозможно**, так как они не привязаны к email. Обратитесь к сотрудникам ЖБУ для удаления анонимной заявки.")
+        st.info("💡 **Для анонимных заявок** (без указания email) удаление через этот интерфейс невозможно. Обратитесь к сотрудникам ЖБУ для удаления анонимной заявки.")
         
         col1, col2 = st.columns(2)
         
