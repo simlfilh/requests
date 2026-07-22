@@ -415,7 +415,7 @@ def show_dormitory_requests_with_control(dormitory):
                 # Создаем колонки с ограниченной шириной
                 col_w0, col_w1 = st.columns(2)
                 with col_w0:
-                    st.warning(f"⚠️ Удалить {len(st.session_state[f'bulk_delete_ids_{dormitory}_{category}'])} заявок?")
+                    st.warning(f"⚠️ Вы действительно хотите удалить количество заявок: {len(st.session_state[f'bulk_delete_ids_{dormitory}_{category}'])}?")
                 col_yes, col_no, col1, col2 = st.columns(4)
                 col_w2, col_w3 = st.columns(2)
                 with col_yes:
@@ -427,7 +427,7 @@ def show_dormitory_requests_with_control(dormitory):
                                 success_count += 1
                         if success_count > 0:
                             with col_w2:
-                                st.success(f"✅ Удалено {success_count} заявок")
+                                st.success(f"✅ Удалено заявок: {success_count}")
                                 for i in range(len(display_cat_df)):
                                     st.session_state[checkbox_key][i] = False
                                 st.session_state[confirm_key] = False
