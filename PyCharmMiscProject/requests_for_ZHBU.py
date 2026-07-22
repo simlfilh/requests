@@ -404,11 +404,10 @@ def show_dormitory_requests_with_control(dormitory):
         confirm_key = f"show_bulk_delete_confirm_{dormitory}_{category}"
         if st.session_state.get(confirm_key, False):
             with st.container():
-                # Сначала показываем предупреждение на всю ширину
                 st.warning(f"⚠️ Удалить {len(st.session_state[f'bulk_delete_ids_{dormitory}_{category}'])} заявок?")
                 
-                # Затем кнопки в колонках
-                col_yes, col_no = st.columns(2)
+                # Создаем колонки с ограниченной шириной
+                col1, col_yes, col_no, col2 = st.columns([3, 1, 1, 3])
                 with col_yes:
                     if st.button("✅ Да", use_container_width=True, key=f"confirm_bulk_{dormitory}_{category}"):
                         success_count = 0
@@ -431,7 +430,6 @@ def show_dormitory_requests_with_control(dormitory):
                         st.session_state[confirm_key] = False
                         st.session_state[f"bulk_delete_ids_{dormitory}_{category}"] = []
                         st.rerun()
-        
         st.markdown("---")  # Разделитель между типами
         
 def main():
