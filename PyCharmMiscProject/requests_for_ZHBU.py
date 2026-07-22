@@ -216,14 +216,16 @@ def show_dormitory_requests_with_control(dormitory):
         filtered_df = filtered_df[filtered_df["status"] == status_filter]
     
     today = datetime.now().date()
+    
+    # Фильтры по дате (сравниваем в формате YYYY-MM-DD)
     if date_filter == "Сегодня":
-        filtered_df = filtered_df[filtered_df["date"] == today.strftime("%d.%m.%Y")]
+        filtered_df = filtered_df[filtered_df["date"] == today.strftime("%Y-%m-%d")]
     elif date_filter == "Вчера":
         yesterday = today - timedelta(days=1)
-        filtered_df = filtered_df[filtered_df["date"] == yesterday.strftime("%d.%m.%Y")]
+        filtered_df = filtered_df[filtered_df["date"] == yesterday.strftime("%Y-%m-%d")]
     elif date_filter == "Выбрать дату":
         selected_date = st.date_input("Выберите дату", value=today, key=f"date_picker_{dormitory}")
-        filtered_df = filtered_df[filtered_df["date"] == selected_date.strftime("%d.%m.%Y")]
+        filtered_df = filtered_df[filtered_df["date"] == selected_date.strftime("%Y-%m-%d")]
     elif date_filter == "Выбрать период":
         col1, col2 = st.columns(2)
         with col1:
@@ -232,10 +234,13 @@ def show_dormitory_requests_with_control(dormitory):
             end_date = st.date_input("Конечная дата", value=today, key=f"end_date_{dormitory}")
         filtered_df["date"] = pd.to_datetime(filtered_df["date"])
         filtered_df = filtered_df[(filtered_df["date"] >= pd.Timestamp(start_date)) & (filtered_df["date"] <= pd.Timestamp(end_date))]
-        filtered_df["date"] = filtered_df["date"].dt.strftime("%d.%m.%Y")
     
-    # Переименовываем для отображения
-    display_df = filtered_df.rename(columns={
+    # Переименовываем для отображения И меняем формат даты
+    display_df = filtered_df.copy()
+    # Преобразуем дату в формат DD.MM.YYYY для отображения
+    display_df["date"] = pd.to_datetime(display_df["date"]).dt.strftime("%d.%m.%Y")
+    
+    display_df = display_df.rename(columns={
         "id": "ID",
         "date": "Дата",
         "time": "Время",
@@ -247,6 +252,8 @@ def show_dormitory_requests_with_control(dormitory):
         "description": "Описание",
         "status": "Статус"
     })
+    
+    # ... остальной код без изменений ...
     
     # ---------- Метрики ----------
     col1, col2, col3, col4 = st.columns(4)
@@ -616,13 +623,13 @@ def show_all_requests_with_control():
     
     # Фильтр по дате
     if date_filter_all == "Сегодня":
-        filtered_df = filtered_df[filtered_df["Дата"] == today.strftime("%d.%m.%Y")]
+        filtered_df = filtered_df[filtered_df["Дата"] == today.strftime("%Y-%m-%d")]
     elif date_filter_all == "Вчера":
         yesterday = today - timedelta(days=1)
-        filtered_df = filtered_df[filtered_df["Дата"] == yesterday.strftime("%d.%m.%Y")]
+        filtered_df = filtered_df[filtered_df["Дата"] == yesterday.strftime("%Y-%m-%d")]
     elif date_filter_all == "Выбрать дату":
         selected_date = st.date_input("Выберите дату", value=today, key="date_picker_all")
-        filtered_df = filtered_df[filtered_df["Дата"] == selected_date.strftime("%d.%m.%Y")]
+        filtered_df = filtered_df[filtered_df["Дата"] == selected_date.strftime("%Y-%m-%d")]
     elif date_filter_all == "Выбрать период":
         col1, col2 = st.columns(2)
         with col1:
@@ -631,7 +638,9 @@ def show_all_requests_with_control():
             end_date = st.date_input("Конечная дата", value=today, key="end_date_all")
         filtered_df["Дата"] = pd.to_datetime(filtered_df["Дата"])
         filtered_df = filtered_df[(filtered_df["Дата"] >= pd.Timestamp(start_date)) & (filtered_df["Дата"] <= pd.Timestamp(end_date))]
-        filtered_df["Дата"] = filtered_df["Дата"].dt.strftime("%d.%m.%Y")
+    
+    # Преобразуем дату в формат DD.MM.YYYY для отображения
+    filtered_df["Дата"] = pd.to_datetime(filtered_df["Дата"]).dt.strftime("%d.%m.%Y")
     
     # Показываем метрики
     col1, col2, col3, col4 = st.columns(4)
