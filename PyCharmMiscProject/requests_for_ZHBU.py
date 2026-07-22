@@ -404,7 +404,9 @@ def show_dormitory_requests_with_control(dormitory):
         confirm_key = f"show_bulk_delete_confirm_{dormitory}_{category}"
         if st.session_state.get(confirm_key, False):
             with st.container():
-                if st.button("✅ Да", key=f"confirm_bulk_{dormitory}_{category}"):
+                col_yes, col_no, col_z = st.columns([1, 1, 6])
+                with col_yes:
+                    if st.button("✅ Да", key=f"confirm_bulk_{dormitory}_{category}"):
                         success_count = 0
                         for id in st.session_state[f"bulk_delete_ids_{dormitory}_{category}"]:
                             success, _ = delete_request(id)
@@ -420,7 +422,8 @@ def show_dormitory_requests_with_control(dormitory):
                             st.rerun()
                         else:
                             st.error("❌ Ошибка при удалении")
-                if st.button("❌ Нет", key=f"cancel_bulk_{dormitory}_{category}"):
+                with col_no:
+                    if st.button("❌ Нет", key=f"cancel_bulk_{dormitory}_{category}"):
                         st.session_state[confirm_key] = False
                         st.session_state[f"bulk_delete_ids_{dormitory}_{category}"] = []
                         st.rerun()
