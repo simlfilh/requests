@@ -481,6 +481,7 @@ def main():
     
     with col2:
         st.write("")
+        st.write("")
         if st.button("🚪 Выйти", use_container_width=True):
             st.session_state.authenticated = False
             st.rerun()
