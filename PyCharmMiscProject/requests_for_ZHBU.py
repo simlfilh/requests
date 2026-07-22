@@ -417,15 +417,17 @@ def show_dormitory_requests_with_control(dormitory):
                             if success:
                                 success_count += 1
                         if success_count > 0:
-                            st.success(f"✅ Удалено {success_count} заявок")
-                            for i in range(len(display_cat_df)):
-                                st.session_state[checkbox_key][i] = False
-                            st.session_state[confirm_key] = False
-                            st.session_state[f"bulk_delete_ids_{dormitory}_{category}"] = []
-                            time.sleep(1)
-                            st.rerun()
+                            with col_w0:
+                                st.success(f"✅ Удалено {success_count} заявок")
+                                for i in range(len(display_cat_df)):
+                                    st.session_state[checkbox_key][i] = False
+                                st.session_state[confirm_key] = False
+                                st.session_state[f"bulk_delete_ids_{dormitory}_{category}"] = []
+                                time.sleep(1)
+                                st.rerun()
                         else:
-                            st.error("❌ Ошибка при удалении")
+                            with col_w0:
+                                st.error("❌ Ошибка при удалении")
                 with col_no:
                     if st.button("❌ Нет", use_container_width=True, key=f"cancel_bulk_{dormitory}_{category}"):
                         st.session_state[confirm_key] = False
