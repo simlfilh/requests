@@ -480,27 +480,35 @@ def main():
             st.session_state.authenticated = False
             st.rerun()
 
-    # === АВТООБНОВЛЕНИЕ КАЖДЫЕ 5 СЕКУНД ===
-    # Используем метку времени для отслеживания обновлений
+    # === АВТООБНОВЛЕНИЕ ЧЕРЕЗ META REFRESH ===
     if st.session_state.authenticated:
-        # Увеличиваем счетчик обновлений
-        st.session_state.refresh_count += 1
-        
-        # JavaScript для автоматического обновления
-        st.markdown(f"""
-            <script>
-                // Функция для обновления страницы
-                function autoRefresh() {{
-                    window.location.reload();
-                }}
-                
-                // Устанавливаем таймер на 5 секунд
-                setTimeout(autoRefresh, 5000);
-            </script>
+        # Самый надежный способ - meta refresh
+        st.markdown("""
+            <meta http-equiv="refresh" content="3">
             
-            <div style="position: fixed; bottom: 10px; right: 10px; background: #f0f2f6; 
-                        padding: 5px 10px; border-radius: 5px; font-size: 12px; color: #666;">
-                🔄 Обновление #{st.session_state.refresh_count} | {datetime.now().strftime('%H:%M:%S')}
+            <style>
+                .auto-refresh-indicator {
+                    position: fixed;
+                    bottom: 10px;
+                    right: 10px;
+                    background: #4CAF50;
+                    color: white;
+                    padding: 8px 15px;
+                    border-radius: 20px;
+                    font-size: 13px;
+                    z-index: 9999;
+                    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+                    animation: pulse 2s infinite;
+                }
+                @keyframes pulse {
+                    0% { opacity: 1; }
+                    50% { opacity: 0.6; }
+                    100% { opacity: 1; }
+                }
+            </style>
+            
+            <div class="auto-refresh-indicator">
+                🔄 Живое обновление (3 сек.)
             </div>
         """, unsafe_allow_html=True)
 
