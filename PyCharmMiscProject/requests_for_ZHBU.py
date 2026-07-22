@@ -471,46 +471,14 @@ def main():
                         st.error("❌ Неверный пароль!")
             return
     
-    with col2:
-        if st.button("🔄 Обновить", use_container_width=True):
-            st.rerun()
-    
     with col3:
         if st.button("🚪 Выйти", use_container_width=True):
             st.session_state.authenticated = False
             st.rerun()
 
-    # === АВТООБНОВЛЕНИЕ ЧЕРЕЗ META REFRESH ===
-    if st.session_state.authenticated:
-        # Самый надежный способ - meta refresh
-        st.markdown("""
-            <meta http-equiv="refresh" content="3">
-            
-            <style>
-                .auto-refresh-indicator {
-                    position: fixed;
-                    bottom: 10px;
-                    right: 10px;
-                    background: #4CAF50;
-                    color: white;
-                    padding: 8px 15px;
-                    border-radius: 20px;
-                    font-size: 13px;
-                    z-index: 9999;
-                    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-                    animation: pulse 2s infinite;
-                }
-                @keyframes pulse {
-                    0% { opacity: 1; }
-                    50% { opacity: 0.6; }
-                    100% { opacity: 1; }
-                }
-            </style>
-            
-            <div class="auto-refresh-indicator">
-                🔄 Живое обновление (3 сек.)
-            </div>
-        """, unsafe_allow_html=True)
+    st.markdown("""
+        <meta http-equiv="refresh" content="5">
+    """, unsafe_allow_html=True)
 
     
     # Кнопки навигации
