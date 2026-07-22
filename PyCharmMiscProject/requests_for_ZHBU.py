@@ -276,7 +276,7 @@ def show_dormitory_requests_with_control(dormitory):
             continue
         
         # Показываем количество заявок данного типа
-        st.caption(f"Всего: {len(cat_df)} заявок")
+        st.caption(f"Количество заявок: {len(cat_df)}")
         
         # ---------- РАБОТА С ЧЕКБОКСАМИ ЧЕРЕЗ SESSION_STATE ----------
         # Создаем ключ для хранения состояния чекбоксов
