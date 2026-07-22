@@ -464,6 +464,7 @@ def main():
 
     # Шапка и аутентификация
     col1, col2 = st.columns([5, 2])
+    col11, col22 = st.columns([5, 2])
     with col1:
         st.title("🔐 Панель сотрудника ЖБУ | Управление электронными заявками")
     
@@ -479,7 +480,7 @@ def main():
                         st.error("❌ Неверный пароль!")
             return
     
-    with col2:
+    with col22:
         if st.button("🚪 Выйти", use_container_width=True):
             st.session_state.authenticated = False
             st.rerun()
