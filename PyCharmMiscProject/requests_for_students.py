@@ -175,10 +175,10 @@ def main():
             # Поля для заполнения заявки студентом
             fio = st.text_input("Ваше ФИО", placeholder="Можно не указывать для анонимности")
             email = st.text_input("Email для связи", 
-                                  placeholder="example@mail.ru | Можно не указывать для анонимности",
-                                  help="На этот email придет подтверждение заявки")
+                                  placeholder="example@mail.ru",
+                                  help="На этот email придет подтверждение заявки. Можно не указывать для анонимности.")
             
-            dormitory = st.selectbox("Выберите общежитие *", DORMITORIES)
+            dormitory = st.selectbox("Выберите общежитие", DORMITORIES)
             
             room = st.text_input("Номер блока/комнаты, например: 10/1")
 
