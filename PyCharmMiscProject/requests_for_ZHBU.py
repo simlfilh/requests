@@ -484,10 +484,6 @@ def main():
             st.session_state.authenticated = False
             st.rerun()
 
-    st.markdown("""
-        <meta http-equiv="refresh" content="5">
-    """, unsafe_allow_html=True)
-
     
     # Кнопки навигации
     cols = st.columns(4)
