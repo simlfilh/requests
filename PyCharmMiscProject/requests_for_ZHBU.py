@@ -392,7 +392,7 @@ def show_dormitory_requests_with_control(dormitory):
             # Экспорт
             excel_data = to_excel(cat_df)
             st.download_button(
-                label=f"📊 Скачать Excel",
+                label=f"📊 Скачать в Excel формате",
                 data=excel_data,
                 file_name=f"{dormitory.split('|')[0].strip()}_{category}_{datetime.now().strftime('%d.%m.%Y_%H:%M:%S')}.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
