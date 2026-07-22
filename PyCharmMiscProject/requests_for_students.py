@@ -52,7 +52,8 @@ def save_request(data):
         "room": data["room"],
         "type": data["type"],
         "description": data["description"],
-        "status": "Новая"
+        "status": "Новая",
+        "is_anonymous": data.get("is_anonymous", False)
     }).execute()
     if result.data:
         return result.data[0]['id']
@@ -124,7 +125,7 @@ def send_confirmation_to_student(student_email, student_name, request_id, descri
     return send_email(student_email, subject, body)
 
 # Функция, которая отправляет уведомление сотруднику ЖБУ о поступлении новой заявки
-def send_notification_to_workers(student_name, student_email, student_room, request_id, request_type, description, dormitory):
+def send_notification_to_workers(student_name, student_email, student_room, request_id, request_type, description, dormitory, is_anonymous=False):
     type_names = {
         "Сантехника": "🔧 Сантехника",
         "Электрика": "⚡ Электрика",
@@ -135,7 +136,23 @@ def send_notification_to_workers(student_name, student_email, student_room, requ
     type_name = type_names.get(request_type, "Вопрос / Другое")
     
     subject = f"🔔 НОВАЯ ЗАЯВКА №{request_id}"
-    body = f"""
+    
+    if is_anonymous:
+        body = f"""
+🏠 {dormitory}
+
+📋 ЗАЯВКА №{request_id}: {type_name}
+
+👤 АНОНИМНАЯ ЗАЯВКА
+• Комната: {student_room}
+
+📝 ОПИСАНИЕ
+{description}
+
+Зайдите в панель управления ЖБУ для обработки заявки.
+"""
+    else:
+        body = f"""
 🏠 {dormitory}
 
 📋 ЗАЯВКА №{request_id}: {type_name}
@@ -171,16 +188,30 @@ def main():
     with tab1:
         st.markdown("Заполните форму ниже, чтобы оставить заявку на ремонт.")
         
+        # Информационное сообщение об анонимности
+        st.info("""
+        **💡 Важно:** 
+        - Поля **ФИО** и **Email** можно **НЕ заполнять**, если вы хотите остаться анонимным
+        - Для анонимных заявок уведомления на почту не отправляются
+        - Обязательны для заполнения: **Общежитие**, **Номер комнаты** и **Описание проблемы**
+        """)
+        
         with st.form("student_form"):
             # Поля для заполнения заявки студентом
-            fio = st.text_input("Ваше ФИО", placeholder="Можно не указывать для анонимности")
-            email = st.text_input("Email для связи", 
-                                  placeholder="example@mail.ru",
-                                  help="На этот email придет подтверждение заявки. Можно не указывать для анонимности.")
+            fio = st.text_input("Ваше ФИО (необязательно)", 
+                              placeholder="Можно не указывать для анонимности")
             
-            dormitory = st.selectbox("Выберите общежитие", DORMITORIES)
+            email = st.text_input("Email для связи (необязательно)", 
+                                placeholder="Можно не указывать для анонимности",
+                                help="На этот email придет подтверждение заявки, если вы его укажете")
             
-            room = st.text_input("Номер блока | Пространство")
+            # Предупреждение если email указан но невалидный
+            if email and not validate_email(email):
+                st.warning("⚠️ Введите корректный email адрес или оставьте поле пустым для анонимности")
+            
+            dormitory = st.selectbox("Выберите общежитие *", DORMITORIES)
+            
+            room = st.text_input("Номер блока/комнаты, например: 10/1 *")
 
             type_map = {
                 "Сантехника": "🔧 Сантехника",
@@ -192,43 +223,85 @@ def main():
             }
             type_display = st.selectbox("Тип заявки", list(type_map.keys()))
 
-            description = st.text_area("Описание проблемы / Текст вопроса", height=150)
+            description = st.text_area("Описание проблемы / Текст вопроса *", height=150)
 
             submitted = st.form_submit_button("Отправить заявку")
 
             # Проверка ошибок при заполнении формы заявки
             if submitted:
-                if not fio or not email or not room or not description:
-                    st.error("❌ Пожалуйста, заполните все поля")
-                elif not validate_email(email):
-                    st.error("❌ Пожалуйста, введите корректный email адрес")
+                # Проверяем только обязательные поля (комната и описание)
+                errors = []
+                
+                if not room:
+                    errors.append("Номер комнаты")
+                if not description:
+                    errors.append("Описание проблемы")
+                
+                # Если email указан, проверяем его корректность
+                if email and not validate_email(email):
+                    errors.append("Некорректный email адрес")
+                
+                if errors:
+                    st.error(f"❌ Пожалуйста, заполните обязательные поля: {', '.join(errors)}")
                 else:
                     # Определение текущего времени
                     utc_now = datetime.now(timezone.utc)
                     local_now = utc_now + timedelta(hours=3)
                     
+                    # Определяем, анонимная ли заявка
+                    is_anonymous = not fio and not email
+                    
+                    # Подготовка данных для базы
+                    if is_anonymous:
+                        fio_for_db = "Аноним"
+                        email_for_db = "anonymous@dorm.ru"
+                    else:
+                        fio_for_db = fio if fio else "Не указано"
+                        email_for_db = email if email else "no-email@dorm.ru"
+                    
                     request_data = {
                         "date": local_now.strftime("%Y-%m-%d"),
                         "time": local_now.strftime("%H:%M:%S"),
-                        "fio": fio,
-                        "email": email,
+                        "fio": fio_for_db,
+                        "email": email_for_db,
                         "dormitory": dormitory,
                         "room": room,
                         "type": type_map[type_display],
-                        "description": description
+                        "description": description,
+                        "is_anonymous": is_anonymous
                     }
+                    
                     # Если все корректно, то сохраняем заявку в базу данных.
                     try:
                         new_id = save_request(request_data)
 
                         # Если заявка сохранилась, то...
                         if new_id:
-                            #... отправляем уведомление студенту и сотруднику ЖБУ
-                            send_confirmation_to_student(email, fio, new_id, description, dormitory)
-                            send_notification_to_workers(fio, email, room, new_id, type_map[type_display], description, dormitory)
+                            # Отправляем уведомления только если указан корректный email и это не анонимная заявка
+                            if email and validate_email(email) and not is_anonymous:
+                                send_confirmation_to_student(email, fio_for_db, new_id, description, dormitory)
+                            
+                            # Уведомление сотрудникам
+                            send_notification_to_workers(
+                                fio_for_db, 
+                                email_for_db, 
+                                room, 
+                                new_id, 
+                                type_map[type_display], 
+                                description, 
+                                dormitory,
+                                is_anonymous
+                            )
 
                             # Всплывающее окно при успешной отправке заявки
-                            st.success(f"✅ Заявка №{new_id} успешно отправлена! Подтверждение придет на вашу почту.")
+                            if is_anonymous:
+                                st.success(f"✅ Анонимная заявка №{new_id} успешно отправлена!")
+                                st.info("ℹ️ Вы не указали ФИО и Email, поэтому уведомления не будут отправлены. Статус заявки можно проверить в разделе 'Управление заявками'.")
+                            else:
+                                if email and validate_email(email):
+                                    st.success(f"✅ Заявка №{new_id} успешно отправлена! Подтверждение придет на вашу почту.")
+                                else:
+                                    st.success(f"✅ Заявка №{new_id} успешно отправлена!")
                         else:
                             st.error("❌ Ошибка при сохранении заявки. Попробуйте еще раз.")
                     except Exception as e:
@@ -238,6 +311,8 @@ def main():
     with tab2:
         st.markdown("### Удаление заявки")
         st.markdown("Введите ваш email и ID заявки, чтобы удалить её")
+        
+        st.info("💡 **Для анонимных заявок** (без указания email) удаление через этот интерфейс невозможно. Обратитесь к сотрудникам ЖБУ для удаления анонимной заявки.")
         
         col1, col2 = st.columns(2)
         
@@ -294,8 +369,6 @@ def main():
                             st.error("❌ ID заявки должен быть числом")
                 else:
                     st.error("❌ Введите email и ID заявки для удаления")
-        
 
 if __name__ == "__main__":
     main()
-
