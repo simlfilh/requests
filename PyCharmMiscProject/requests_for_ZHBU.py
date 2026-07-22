@@ -451,11 +451,11 @@ def main():
         st.session_state.show_bulk_delete_confirm_all = False
     if "bulk_delete_ids_all" not in st.session_state:
         st.session_state.bulk_delete_ids_all = []
-    if "last_refresh" not in st.session_state:
-        st.session_state.last_refresh = datetime.now()
+    if "refresh_count" not in st.session_state:
+        st.session_state.refresh_count = 0
 
     # Шапка и аутентификация
-    col1, col2, col3, col4 = st.columns([4, 1, 1, 1])
+    col1, col2, col3 = st.columns([5, 1, 1])
     with col1:
         st.title("🔐 Панель сотрудника ЖБУ | Управление электронными заявками")
     
@@ -466,47 +466,45 @@ def main():
                 if submitted:
                     if password_input == PASSWORD:
                         st.session_state.authenticated = True
-                        st.session_state.last_refresh = datetime.now()
                         st.rerun()
                     else:
                         st.error("❌ Неверный пароль!")
             return
     
     with col2:
-        if st.button("🔄 Обновить", use_container_width=True, help="Обновить данные"):
-            st.session_state.last_refresh = datetime.now()
+        if st.button("🔄 Обновить", use_container_width=True):
             st.rerun()
     
     with col3:
-        if "auto_refresh" not in st.session_state:
-            st.session_state.auto_refresh = False
-        
-        if st.button("⏱️ Авто" if not st.session_state.auto_refresh else "⏹️ Стоп", 
-                    use_container_width=True,
-                    type="primary" if st.session_state.auto_refresh else "secondary",
-                    help="Включить/выключить автообновление"):
-            st.session_state.auto_refresh = not st.session_state.auto_refresh
-            if st.session_state.auto_refresh:
-                st.session_state.last_refresh = datetime.now()
-            st.rerun()
-    
-    with col4:
         if st.button("🚪 Выйти", use_container_width=True):
             st.session_state.authenticated = False
-            st.session_state.auto_refresh = False
             st.rerun()
-    
-    # Автообновление
-    if st.session_state.get('auto_refresh', False):
-        # JavaScript для автообновления
-        st.markdown("""
+
+    # === АВТООБНОВЛЕНИЕ КАЖДЫЕ 5 СЕКУНД ===
+    # Используем метку времени для отслеживания обновлений
+    if st.session_state.authenticated:
+        # Увеличиваем счетчик обновлений
+        st.session_state.refresh_count += 1
+        
+        # JavaScript для автоматического обновления
+        st.markdown(f"""
             <script>
-                setTimeout(function() {
+                // Функция для обновления страницы
+                function autoRefresh() {{
                     window.location.reload();
-                }, 30000);
+                }}
+                
+                // Устанавливаем таймер на 5 секунд
+                setTimeout(autoRefresh, 5000);
             </script>
+            
+            <div style="position: fixed; bottom: 10px; right: 10px; background: #f0f2f6; 
+                        padding: 5px 10px; border-radius: 5px; font-size: 12px; color: #666;">
+                🔄 Обновление #{st.session_state.refresh_count} | {datetime.now().strftime('%H:%M:%S')}
+            </div>
         """, unsafe_allow_html=True)
-        st.info(f"🔄 Автообновление включено (каждые 30 сек.) | Последнее обновление: {st.session_state.last_refresh.strftime('%H:%M:%S')}")
+
+    
     # Кнопки навигации
     cols = st.columns(4)
     dormitories_short = ["№2", "№3", "№4", "№7"]
