@@ -463,7 +463,7 @@ def main():
         st.session_state.refresh_count = 0
 
     # Шапка и аутентификация
-    col1, col2, col3 = st.columns([5, 1, 1])
+    col1, col2 = st.columns([5, 2])
     with col1:
         st.title("🔐 Панель сотрудника ЖБУ | Управление электронными заявками")
     
