@@ -7,6 +7,18 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import time
+import locale
+import os
+
+# Пытаемся установить русскую локаль
+try:
+    if os.name == 'nt':  # Windows
+        locale.setlocale(locale.LC_TIME, 'Russian_Russia.1251')
+    else:  # Linux/Mac
+        locale.setlocale(locale.LC_TIME, 'ru_RU.UTF-8')
+except:
+    # Если не получилось, оставляем системную локаль
+    pass
 
 st.set_page_config(
     page_title="Управление электронными заявками | Общежития СПбГЭУ",
