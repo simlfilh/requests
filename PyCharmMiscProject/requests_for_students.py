@@ -190,10 +190,10 @@ def main():
         
         with st.form("student_form"):
             # Поля для заполнения заявки студентом
-            fio = st.text_input("Ваше ФИО (необязательно)", 
+            fio = st.text_input("Ваше ФИО", 
                               placeholder="Можно не указывать для анонимности")
             
-            email = st.text_input("Email для связи (необязательно)", 
+            email = st.text_input("Email для связи", 
                                 placeholder="example@mail.ru | Можно не указывать для анонимности",
                                 help="На этот email придет подтверждение заявки, если вы его укажете")
             
@@ -201,9 +201,9 @@ def main():
             if email and not validate_email(email):
                 st.warning("⚠️ Введите корректный email адрес или оставьте поле пустым для анонимности")
             
-            dormitory = st.selectbox("Выберите общежитие *", DORMITORIES)
+            dormitory = st.selectbox("Выберите общежитие", DORMITORIES)
             
-            room = st.text_input("Номер блока/комнаты, например: 10/1 *")
+            room = st.text_input("Номер блока и комнаты | Пространство: кухня, коридор и т.п.")
 
             type_map = {
                 "Сантехника": "🔧 Сантехника",
