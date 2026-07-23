@@ -10,7 +10,50 @@ import time
 import locale
 import os
 
-# Пытаемся установить русскую локаль
+st.markdown("""
+        <style>
+        .stButton > button {
+            width: 100%;
+        }
+        .green-button > button {
+            background-color: #4CAF50 !important;
+            color: white !important;
+            border-color: #4CAF50 !important;
+        }
+        .green-button > button:hover {
+            background-color: #45a049 !important;
+            border-color: #45a049 !important;
+        }
+        .blue-button > button {
+            background-color: #2196F3 !important;
+            color: white !important;
+            border-color: #2196F3 !important;
+        }
+        .blue-button > button:hover {
+            background-color: #1976D2 !important;
+            border-color: #1976D2 !important;
+        }
+        .pink-button > button {
+            background-color: #E91E63 !important;
+            color: white !important;
+            border-color: #E91E63 !important;
+        }
+        .pink-button > button:hover {
+            background-color: #C2185B !important;
+            border-color: #C2185B !important;
+        }
+        .red-button > button {
+            background-color: #f44336 !important;
+            color: white !important;
+            border-color: #f44336 !important;
+        }
+        .red-button > button:hover {
+            background-color: #d32f2f !important;
+            border-color: #d32f2f !important;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
 try:
     if os.name == 'nt':  # Windows
         locale.setlocale(locale.LC_TIME, 'Russian_Russia.1251')
@@ -379,17 +422,19 @@ def show_dormitory_requests_with_control(dormitory):
         
         # ЛЕВЫЙ СТОЛБЕЦ: Выбрать все, Снять все, Удалить
         with col_left:
+            st.markdown('<div class="green-button">', unsafe_allow_html=True)
             if st.button("✅ Выбрать все", use_container_width=True, key=f"select_all_{dormitory}_{category}"):
                 for i in range(len(display_cat_df)):
                     st.session_state[checkbox_key][i] = True
                 st.rerun()
+            st.markdown('<div>', unsafe_allow_html=True)
             
-            if st.button("❌ Снять все", use_container_width=True, key=f"deselect_all_{dormitory}_{category}"):
+            if st.button("❌ Снять все", use_container_width=True, key=f"deselect_all_{dormitory}_{category}", type="primary"):
                 for i in range(len(display_cat_df)):
                     st.session_state[checkbox_key][i] = False
                 st.rerun()
             
-            if st.button(f"🗑️ Удалить ({len(selected_ids)})", use_container_width=True, key=f"bulk_delete_{dormitory}_{category}", type="primary"):
+            if st.button(f"🗑️ Удалить ({len(selected_ids)})", use_container_width=True, key=f"bulk_delete_{dormitory}_{category}"):
                 st.session_state[f"show_bulk_delete_confirm_{dormitory}_{category}"] = True
                 st.session_state[f"bulk_delete_ids_{dormitory}_{category}"] = selected_ids
         
@@ -400,7 +445,8 @@ def show_dormitory_requests_with_control(dormitory):
                     key=f"bulk_status_{dormitory}_{category}",
                     label_visibility="collapsed"
                 )
-                
+
+            st.markdown('<div class="blue-button">', unsafe_allow_html=True)
             if st.button(f"🔄 Изменить статус ({len(selected_ids)})", use_container_width=True, key=f"bulk_update_{dormitory}_{category}"):
                     success_count = 0
                     for id in selected_ids:
@@ -414,9 +460,11 @@ def show_dormitory_requests_with_control(dormitory):
                         st.rerun()
                     else:
                         st.error("❌ Ошибка при обновлении статусов")
+            st.markdown('<div>', unsafe_allow_html=True)
                         
             # Экспорт
             excel_data = to_excel(cat_df)
+            st.markdown('<div class="pink-button">', unsafe_allow_html=True)
             st.download_button(
                 label=f"📊 Скачать в Excel формате",
                 data=excel_data,
@@ -425,6 +473,7 @@ def show_dormitory_requests_with_control(dormitory):
                 use_container_width=True,
                 key=f"export_{dormitory}_{category}"
             )
+            st.markdown('<div>', unsafe_allow_html=True)
         
         # Диалог подтверждения массового удаления
         confirm_key = f"show_bulk_delete_confirm_{dormitory}_{category}"
@@ -744,13 +793,15 @@ def show_all_requests_with_control():
         
         with col1:
             # Кнопка "Выбрать все"
+            st.markdown('<div class="green-button">', unsafe_allow_html=True)
             if st.button("✅ Выбрать все", use_container_width=True, key="select_all_all"):
                 for i in range(len(edit_df)):
                     st.session_state[checkbox_key_all][i] = True
                 st.rerun()
+            st.markdown('<div>', unsafe_allow_html=True)
             
             # Кнопка "Снять все"
-            if st.button("❌ Снять все", use_container_width=True, key="deselect_all_all"):
+            if st.button("❌ Снять все", use_container_width=True, key="deselect_all_all", type="primary"):
                 for i in range(len(edit_df)):
                     st.session_state[checkbox_key_all][i] = False
                 st.rerun()
@@ -765,6 +816,7 @@ def show_all_requests_with_control():
             )
             
             # Кнопка "Изменить статус"
+            st.markdown('<div class="blue-button">', unsafe_allow_html=True)
             if st.button(f"🔄 Изменить статус ({len(selected_ids)})", use_container_width=True, key="bulk_update_all"):
                 success_count = 0
                 for id in selected_ids:
@@ -779,6 +831,7 @@ def show_all_requests_with_control():
                     st.rerun()
                 else:
                     st.error("❌ Ошибка при обновлении статусов")
+            st.markdown('<div>', unsafe_allow_html=True)
         
         # Диалог подтверждения массового удаления
         if st.session_state.get('show_bulk_delete_confirm_all', False):
@@ -809,11 +862,12 @@ def show_all_requests_with_control():
                             st.session_state.bulk_delete_ids_all = []
                             st.rerun()
 
-        if st.button(f"🗑️ Удалить ({len(selected_ids)})", use_container_width=True, key="bulk_delete_all", type="primary"):
+        if st.button(f"🗑️ Удалить ({len(selected_ids)})", use_container_width=True, key="bulk_delete_all"):
                 st.session_state.show_bulk_delete_confirm_all = True
                 st.session_state.bulk_delete_ids_all = selected_ids
             
         excel_data = to_excel(filtered_df)
+        st.markdown('<div class="pink-button">', unsafe_allow_html=True)
         st.download_button(
             label="📊 Скачать в Excel формате",
             data=excel_data,
@@ -822,6 +876,7 @@ def show_all_requests_with_control():
             use_container_width=True,
             key="export_all"
         )
+        st.markdown('<div>', unsafe_allow_html=True)
     else:
         st.warning("Нет заявок для отображения")
         
