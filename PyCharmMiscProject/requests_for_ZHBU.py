@@ -230,7 +230,7 @@ def to_excel(df):
                         estimated_lines = max(1, (len(text) // 50) + 1)
                         height_needed = estimated_lines * 18  # 18 пикселей на строку
                         if height_needed > max_height:
-                            max_height = min(height_needed, 160)  # Максимум 120 пикселей
+                            max_height = min(height_needed, 200)  # Максимум 120 пикселей
             
             # Устанавливаем высоту строки
             worksheet.row_dimensions[row[0].row].height = max_height
