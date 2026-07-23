@@ -173,18 +173,8 @@ def send_status_notification(student_email, student_name, request_id, new_status
 
 def to_excel(df):
     output = BytesIO()
-    
-    # Выбираем только нужные колонки
-    columns_to_keep = ['Дата', 'ФИО студента', 'Комната', 'Тип заявки', 'Описание']
-    
-    # Проверяем, какие колонки есть в DataFrame
-    available_columns = [col for col in columns_to_keep if col in df.columns]
-    
-    # Создаем копию только с нужными колонками
-    df_filtered = df[available_columns].copy()
-    
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        df_filtered.to_excel(writer, index=False, sheet_name='Заявки')
+        df.to_excel(writer, index=False, sheet_name='Заявки')
         
         # Получаем рабочую книгу и лист
         workbook = writer.book
@@ -192,59 +182,25 @@ def to_excel(df):
         
         from openpyxl.styles import Alignment
         
-        # Настраиваем ширину колонок
-        for column in worksheet.columns:
-            max_length = 0
-            column_letter = column[0].column_letter
-            
-            # Проверяем длину заголовка
-            header = column[0].value
-            if header:
-                max_length = len(str(header)) * 1.2
-            
-            # Проверяем длину данных в колонке
-            for cell in list(column)[1:]:
-                if cell.value:
-                    text = str(cell.value)
-                    length = len(text) * 1.2
-                    
-                    # Для колонки "Описание" делаем шире
-                    if column_letter == 'E':  # Описание (теперь 5-я колонка)
-                        length = min(length, 80)
-                    else:
-                        length = min(length, 35)
-                    
-                    if length > max_length:
-                        max_length = length
-            
-            # Устанавливаем ширину
-            adjusted_width = max(max_length + 2, 12)
-            worksheet.column_dimensions[column_letter].width = adjusted_width
+        # Устанавливаем ширину колонок
+        column_widths = {
+            'A': 8, 'B': 14, 'C': 12, 'D': 25, 'E': 25,
+            'F': 20, 'G': 10, 'H': 18, 'I': 60, 'J': 12
+        }
+        for col_letter, width in column_widths.items():
+            worksheet.column_dimensions[col_letter].width = width
         
-        # Настраиваем высоту строк и выравнивание
-        for row_idx, row in enumerate(worksheet.iter_rows(), start=1):
-            max_height = 25
-            
+        # Устанавливаем высоту для всех строк (кроме заголовка)
+        for row_idx in range(2, worksheet.max_row + 1):
+            worksheet.row_dimensions[row_idx].height = 35  # Фиксированная высота
+        
+        # Устанавливаем выравнивание
+        for row in worksheet.iter_rows():
             for cell in row:
-                if cell.value:
-                    text = str(cell.value)
-                    lines = text.count('\n') + 1
-                    
-                    if len(text) > 50:
-                        estimated_lines = max(1, (len(text) // 50) + 1)
-                        height_needed = estimated_lines * 18
-                        if height_needed > max_height:
-                            max_height = min(height_needed, 160)
-            
-            worksheet.row_dimensions[row[0].row].height = max_height
-            
-            # Выравнивание для каждой ячейки
-            for cell in row:
-                # Для колонки с описанием включаем перенос текста
-                if cell.column_letter == 'E':  # Описание (теперь 5-я колонка)
+                if cell.column_letter == 'I':  # Описание
                     cell.alignment = Alignment(
                         horizontal='left',
-                        vertical='top',
+                        vertical='center',
                         wrap_text=True
                     )
                 else:
