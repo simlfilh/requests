@@ -203,7 +203,7 @@ def to_excel(df):
                     if column_letter == 'I':  # Колонка с описанием
                         length = min(length, 80)
                     else:
-                        length = min(length, 20)
+                        length = min(length, 35)
                     
                     if length > max_length:
                         max_length = length
