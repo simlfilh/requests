@@ -181,6 +181,7 @@ def to_excel(df):
         worksheet = writer.sheets['Заявки']
         
         from openpyxl.styles import Alignment
+        from openpyxl.utils import get_column_letter
         
         # Настраиваем ширину колонок
         for column in worksheet.columns:
@@ -195,15 +196,14 @@ def to_excel(df):
             # Проверяем длину данных в колонке
             for cell in list(column)[1:]:  # Пропускаем заголовок
                 if cell.value:
-                    # Для длинного текста (описание) делаем больше ширину
                     text = str(cell.value)
                     length = len(text) * 1.2
                     
                     # Для колонки "Описание" делаем шире
                     if column_letter == 'I':  # Колонка с описанием
-                        length = min(length, 80)  # Ограничиваем до 80
+                        length = min(length, 80)
                     else:
-                        length = min(length, 40)  # Остальные до 40
+                        length = min(length, 40)
                     
                     if length > max_length:
                         max_length = length
@@ -213,9 +213,27 @@ def to_excel(df):
             worksheet.column_dimensions[column_letter].width = adjusted_width
         
         # Настраиваем высоту строк и выравнивание
-        for row in worksheet.iter_rows():
-            # Высота строки
-            worksheet.row_dimensions[row[0].row].height = 25
+        for row_idx, row in enumerate(worksheet.iter_rows(), start=1):
+            # Определяем максимальную высоту для строки
+            max_height = 25  # Минимальная высота
+            
+            # Проверяем все ячейки в строке
+            for cell in row:
+                if cell.value:
+                    # Считаем количество строк в тексте (по переносам)
+                    text = str(cell.value)
+                    lines = text.count('\n') + 1
+                    
+                    # Для длинного текста увеличиваем высоту
+                    if len(text) > 50:
+                        # Примерный расчет: каждые 50 символов - новая строка
+                        estimated_lines = max(1, (len(text) // 50) + 1)
+                        height_needed = estimated_lines * 18  # 18 пикселей на строку
+                        if height_needed > max_height:
+                            max_height = min(height_needed, 120)  # Максимум 120 пикселей
+            
+            # Устанавливаем высоту строки
+            worksheet.row_dimensions[row[0].row].height = max_height
             
             # Выравнивание для каждой ячейки
             for cell in row:
@@ -223,8 +241,8 @@ def to_excel(df):
                 if cell.column_letter == 'I':  # Колонка с описанием
                     cell.alignment = Alignment(
                         horizontal='left',
-                        vertical='center',
-                        wrap_text=True  # Перенос текста
+                        vertical='top',  # Выравнивание по верху для многострочного текста
+                        wrap_text=True
                     )
                 else:
                     cell.alignment = Alignment(
@@ -236,7 +254,7 @@ def to_excel(df):
         worksheet.freeze_panes = 'A2'
         
     return output.getvalue()
-
+    
 def show_statistics():
     """Функция для отображения статистики"""
     st.header("📊 Статистика по общежитиям")
