@@ -589,8 +589,7 @@ def main():
             show_dormitory_requests_with_control(st.session_state.selected_dormitory)
 
 def show_all_requests_with_control():
-
-  st.markdown("""
+    st.markdown("""
         <style>
         .stButton > button {
             width: 100%;
@@ -634,7 +633,6 @@ def show_all_requests_with_control():
         </style>
     """, unsafe_allow_html=True)
   
-    """Функция для отображения всех заявок с управлением"""
     st.header("📋 Все заявки")
     
     df_all = load_requests_cached()
