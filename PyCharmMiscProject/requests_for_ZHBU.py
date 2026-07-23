@@ -10,54 +10,6 @@ import time
 import locale
 import os
 
-st.markdown("""
-    <style>
-    /* Стиль для всех кнопок */
-    .stButton > button {
-        width: 100%;
-        border-radius: 4px;
-        font-weight: 500;
-        transition: all 0.2s;
-    }
-    
-    /* Зеленая кнопка - Выбрать все */
-    .green-button button {
-        background-color: #4CAF50 !important;
-        color: white !important;
-        border: 1px solid #4CAF50 !important;
-    }
-    .green-button button:hover {
-        background-color: #45a049 !important;
-        border-color: #45a049 !important;
-        color: white !important;
-    }
-    
-    /* Голубая кнопка - Изменить статус */
-    .blue-button button {
-        background-color: #2196F3 !important;
-        color: white !important;
-        border: 1px solid #2196F3 !important;
-    }
-    .blue-button button:hover {
-        background-color: #1976D2 !important;
-        border-color: #1976D2 !important;
-        color: white !important;
-    }
-    
-    /* Розовая кнопка - Скачать в Excel */
-    .pink-button button {
-        background-color: #E91E63 !important;
-        color: white !important;
-        border: 1px solid #E91E63 !important;
-    }
-    .pink-button button:hover {
-        background-color: #C2185B !important;
-        border-color: #C2185B !important;
-        color: white !important;
-    }
-    </style>
-""", unsafe_allow_html=True)
-
 try:
     if os.name == 'nt':  # Windows
         locale.setlocale(locale.LC_TIME, 'Russian_Russia.1251')
@@ -797,7 +749,42 @@ def show_all_requests_with_control():
         
         with col1:
             # Кнопка "Выбрать все" - ЗЕЛЕНАЯ
-            st.markdown('<div class="green-button">', unsafe_allow_html=True)
+            st.markdown(f"""
+                <div style="margin-bottom: 8px;">
+                    <button style="
+                        width: 100%;
+                        color: white;
+                        background-color: #4CAF50;
+                        border: 1px solid #4CAF50;
+                        padding: 8px 0;
+                        border-radius: 4px;
+                        font-weight: 500;
+                        cursor: pointer;
+                    ">✅ Выбрать все</button>
+                </div>
+            """, unsafe_allow_html=True)
+            
+            # На самом деле button из HTML не будет работать, поэтому используем st.button
+            # и просто применяем стили через CSS класс
+            st.markdown("""
+                <style>
+                .green-btn > button {
+                    background-color: #4CAF50 !important;
+                    color: white !important;
+                    border-color: #4CAF50 !important;
+                }
+                .green-btn > button:hover {
+                    background-color: #45a049 !important;
+                    border-color: #45a049 !important;
+                    color: white !important;
+                }
+                .green-btn > button:active {
+                    background-color: #3d8b40 !important;
+                }
+                </style>
+            """, unsafe_allow_html=True)
+            
+            st.markdown('<div class="green-btn">', unsafe_allow_html=True)
             if st.button("✅ Выбрать все", use_container_width=True, key="select_all_all"):
                 for i in range(len(edit_df)):
                     st.session_state[checkbox_key_all][i] = True
@@ -805,10 +792,15 @@ def show_all_requests_with_control():
             st.markdown('</div>', unsafe_allow_html=True)
             
             # Кнопка "Снять все" - СТАНДАРТНАЯ
-            if st.button("❌ Снять все", use_container_width=True, key="deselect_all_all", type="primary"):
+            if st.button("❌ Снять все", use_container_width=True, key="deselect_all_all"):
                 for i in range(len(edit_df)):
                     st.session_state[checkbox_key_all][i] = False
                 st.rerun()
+            
+            # Кнопка "Удалить" - СТАНДАРТНАЯ
+            if st.button(f"🗑️ Удалить ({len(selected_ids)})", use_container_width=True, key="bulk_delete_all"):
+                st.session_state.show_bulk_delete_confirm_all = True
+                st.session_state.bulk_delete_ids_all = selected_ids
         
         with col2:
             # Выбор статуса (без лейбла)
@@ -820,7 +812,25 @@ def show_all_requests_with_control():
             )
             
             # Кнопка "Изменить статус" - ГОЛУБАЯ
-            st.markdown('<div class="blue-button">', unsafe_allow_html=True)
+            st.markdown("""
+                <style>
+                .blue-btn > button {
+                    background-color: #2196F3 !important;
+                    color: white !important;
+                    border-color: #2196F3 !important;
+                }
+                .blue-btn > button:hover {
+                    background-color: #1976D2 !important;
+                    border-color: #1976D2 !important;
+                    color: white !important;
+                }
+                .blue-btn > button:active {
+                    background-color: #0d47a1 !important;
+                }
+                </style>
+            """, unsafe_allow_html=True)
+            
+            st.markdown('<div class="blue-btn">', unsafe_allow_html=True)
             if st.button(f"🔄 Изменить статус ({len(selected_ids)})", use_container_width=True, key="bulk_update_all"):
                 success_count = 0
                 for id in selected_ids:
@@ -865,15 +875,33 @@ def show_all_requests_with_control():
                             st.session_state.show_bulk_delete_confirm_all = False
                             st.session_state.bulk_delete_ids_all = []
                             st.rerun()
-
-         # Кнопка "Удалить" - СТАНДАРТНАЯ
-        if st.button(f"🗑️ Удалить ({len(selected_ids)})", use_container_width=True, key="bulk_delete_all"):
-            st.session_state.show_bulk_delete_confirm_all = True
-            st.session_state.bulk_delete_ids_all = selected_ids
+        
+        # Экспорт в Excel
+        st.markdown("---")
+        st.subheader("📥 Экспорт данных")
         
         excel_data = to_excel(filtered_df)
+        
         # Кнопка "Скачать в Excel" - РОЗОВАЯ
-        st.markdown('<div class="pink-button">', unsafe_allow_html=True)
+        st.markdown("""
+            <style>
+            .pink-btn > button {
+                background-color: #E91E63 !important;
+                color: white !important;
+                border-color: #E91E63 !important;
+            }
+            .pink-btn > button:hover {
+                background-color: #C2185B !important;
+                border-color: #C2185B !important;
+                color: white !important;
+            }
+            .pink-btn > button:active {
+                background-color: #880e4f !important;
+            }
+            </style>
+        """, unsafe_allow_html=True)
+        
+        st.markdown('<div class="pink-btn">', unsafe_allow_html=True)
         st.download_button(
             label="📊 Скачать в Excel формате",
             data=excel_data,
