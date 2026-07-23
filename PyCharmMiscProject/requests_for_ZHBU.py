@@ -496,11 +496,9 @@ def main():
                     st.error("❌ Неверный пароль!")
         return
     
-    col1, col2 = st.columns([5, 2])
+    col1, col2 = st.columns([6, 1])
     
     with col2:
-        st.write("")
-        st.write("")
         if st.button("🚪 Выйти", use_container_width=True):
             st.session_state.authenticated = False
             st.rerun()
