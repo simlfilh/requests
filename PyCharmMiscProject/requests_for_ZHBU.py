@@ -293,230 +293,87 @@ def show_statistics():
     st.dataframe(stats_df, use_container_width=True, hide_index=True)
 
 def show_chat_modal(request_id, request_data):
-    """Отображает чат для одной заявки с использованием st.chat_input"""
-    
     comments_df = load_comments(request_id)
     
-    st.markdown("""
-    <style>
-    .chat-container {
-        background: white;
-        border-radius: 12px;
-        border: 1px solid #e0e0e0;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-        padding: 20px;
-        margin: 20px 0;
-        max-height: 600px;
-        display: flex;
-        flex-direction: column;
-    }
-    .chat-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        border-bottom: 2px solid #4CAF50;
-        padding-bottom: 12px;
-        margin-bottom: 15px;
-    }
-    .chat-header h3 {
-        margin: 0;
-        color: #2c3e50;
-    }
-    .chat-messages-container {
-        flex: 1;
-        overflow-y: auto;
-        max-height: 350px;
-        padding: 10px 5px;
-        margin-bottom: 15px;
-        background: #f8f9fa;
-        border-radius: 8px;
-        min-height: 150px;
-    }
-    .chat-message {
-        background: white;
-        padding: 10px 15px;
-        border-radius: 10px;
-        margin-bottom: 10px;
-        border-left: 4px solid #4CAF50;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    }
-    .chat-message .author {
-        font-weight: bold;
-        color: #2c3e50;
-        font-size: 0.95em;
-    }
-    .chat-message .time {
-        color: #999;
-        font-size: 0.8em;
-        margin-left: 10px;
-    }
-    .chat-message .text {
-        margin-top: 5px;
-        color: #333;
-        word-wrap: break-word;
-        white-space: pre-wrap;
-    }
-    .no-messages {
-        color: #999;
-        text-align: center;
-        padding: 30px 0;
-    }
-    .chat-close-btn {
-        background: #e74c3c;
-        color: white;
-        border: none;
-        border-radius: 8px;
-        padding: 8px 20px;
-        cursor: pointer;
-        font-weight: bold;
-    }
-    .chat-close-btn:hover {
-        background: #c0392b;
-    }
-    </style>
-    """, unsafe_allow_html=True)
+    # Выбор автора
+    author = st.selectbox(
+        "Кто вы?",
+        ["Сотрудник ЖБУ", "Технический специалист", "Мастер", "Администратор"],
+        key=f"chat_author_{request_id}"
+    )
     
-    with st.container():
-        st.markdown(f"""
-        <div class="chat-container">
-            <div class="chat-header">
-                <h3>💬 Заявка #{request_id}</h3>
-                <button class="chat-close-btn" onclick="document.getElementById('close_chat_{request_id}').click();">✕ Закрыть</button>
-            </div>
-            <div class="chat-messages-container">
-        """, unsafe_allow_html=True)
-        
-        if not comments_df.empty:
-            for _, comment in comments_df.iterrows():
-                author = comment.get('author', 'Сотрудник')
-                created_at = comment.get('created_at', '')
-                comment_text = comment.get('comment', '')
-                
-                try:
-                    if created_at:
-                        dt = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
-                        time_str = dt.strftime('%d.%m.%Y %H:%M')
-                    else:
-                        time_str = 'Неизвестно'
-                except:
+    # Показываем существующие комментарии
+    if not comments_df.empty:
+        for _, comment in comments_df.iterrows():
+            author_name = comment.get('author', 'Сотрудник')
+            created_at = comment.get('created_at', '')
+            comment_text = comment.get('comment', '')
+            
+            try:
+                if created_at:
+                    dt = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+                    time_str = dt.strftime('%d.%m.%Y %H:%M')
+                else:
                     time_str = 'Неизвестно'
-                
-                st.markdown(f"""
-                <div class="chat-message">
-                    <div>
-                        <span class="author">{author}</span>
-                        <span class="time">{time_str}</span>
-                    </div>
-                    <div class="text">{comment_text}</div>
-                </div>
-                """, unsafe_allow_html=True)
-        else:
-            st.markdown('<div class="no-messages">💬 Сообщений пока нет</div>', unsafe_allow_html=True)
-        
-        st.markdown('</div>', unsafe_allow_html=True)
-        
-        author = st.selectbox(
-            "Кто вы?",
-            ["Сотрудник ЖБУ", "Технический специалист", "Мастер", "Администратор"],
-            key=f"chat_author_{request_id}",
-            label_visibility="collapsed"
-        )
-        
-        prompt = st.chat_input(
-            "Введите сообщение...",
-            key=f"chat_input_{request_id}",
-        )
-        
-        if prompt:
-            success, message = add_comment(request_id, prompt, author)
-            if success:
-                st.success("✅ Сообщение отправлено!")
-                time.sleep(0.5)
-                st.rerun()
-            else:
-                st.error(f"❌ {message}")
-        
-        if st.button("Закрыть", key=f"close_chat_{request_id}", use_container_width=True, type="secondary"):
-            st.session_state[f"chat_open_{request_id}"] = False
+            except:
+                time_str = 'Неизвестно'
+            
+            st.markdown(f"""
+            **{author_name}** *{time_str}*
+            > {comment_text}
+            ---
+            """)
+    else:
+        st.info("💬 Комментариев пока нет")
+    
+    # Ввод комментария через chat_input
+    prompt = st.chat_input(
+        "Введите сообщение...",
+        key=f"chat_input_{request_id}",
+    )
+    
+    if prompt:
+        success, message = add_comment(request_id, prompt, author)
+        if success:
+            st.success("✅ Сообщение отправлено!")
+            time.sleep(0.5)
             st.rerun()
+        else:
+            st.error(f"❌ {message}")
 
 def show_bulk_comment_modal(selected_ids, dormitory, category):
-    """Отображает модальное окно для массового комментария"""
+    """Массовый комментарий к нескольким заявкам"""
     
-    st.markdown("""
-    <style>
-    .bulk-modal-container {
-        background: white;
-        border: 2px solid #4CAF50;
-        border-radius: 12px;
-        padding: 20px;
-        margin: 20px 0;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-    }
-    .bulk-modal-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        border-bottom: 2px solid #4CAF50;
-        padding-bottom: 12px;
-        margin-bottom: 15px;
-    }
-    .bulk-modal-header h3 {
-        margin: 0;
-        color: #2c3e50;
-    }
-    .bulk-count {
-        color: #666;
-        font-size: 0.95em;
-    }
-    </style>
-    """, unsafe_allow_html=True)
+    st.info(f"💬 Добавление комментария к {len(selected_ids)} заявкам")
     
-    with st.container():
-        st.markdown(f"""
-        <div class="bulk-modal-container">
-            <div class="bulk-modal-header">
-                <h3>💬 Массовый комментарий</h3>
-                <span class="bulk-count">Выбрано: {len(selected_ids)} заявок</span>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        with st.expander(f"📋 Показать выбранные заявки ({len(selected_ids)})"):
-            cols = st.columns(4)
-            for idx, req_id in enumerate(selected_ids):
-                cols[idx % 4].markdown(f"- Заявка #{req_id}")
-        
-        bulk_author = st.selectbox(
-            "Кто вы?",
-            ["Сотрудник ЖБУ", "Технический специалист", "Мастер", "Администратор"],
-            key=f"bulk_author_{dormitory}_{category}"
-        )
-        
-        bulk_comment = st.chat_input(
-            "Введите комментарий для всех выбранных заявок...",
-            key=f"bulk_chat_input_{dormitory}_{category}"
-        )
-        
-        if bulk_comment:
-            success_count, message = add_bulk_comments(selected_ids, bulk_comment, bulk_author)
-            if success_count > 0:
-                st.success(message)
-                time.sleep(1)
-                if dormitory == "all" and category == "all":
-                    st.session_state["show_bulk_comment_all"] = False
-                else:
-                    st.session_state[f"show_bulk_comment_{dormitory}_{category}"] = False
-                st.rerun()
-            else:
-                st.error(f"❌ {message}")
-        
-        if st.button("❌ Закрыть", use_container_width=True, key=f"close_bulk_{dormitory}_{category}"):
+    # Показываем список заявок
+    with st.expander(f"📋 Выбранные заявки ({len(selected_ids)})"):
+        for req_id in selected_ids:
+            st.markdown(f"- Заявка #{req_id}")
+    
+    author = st.selectbox(
+        "Кто вы?",
+        ["Сотрудник ЖБУ", "Технический специалист", "Мастер", "Администратор"],
+        key=f"bulk_author_{dormitory}_{category}"
+    )
+    
+    prompt = st.chat_input(
+        "Введите комментарий для всех выбранных заявок...",
+        key=f"bulk_chat_input_{dormitory}_{category}"
+    )
+    
+    if prompt:
+        success_count, message = add_bulk_comments(selected_ids, prompt, author)
+        if success_count > 0:
+            st.success(message)
+            time.sleep(1)
             if dormitory == "all" and category == "all":
                 st.session_state["show_bulk_comment_all"] = False
             else:
                 st.session_state[f"show_bulk_comment_{dormitory}_{category}"] = False
             st.rerun()
+        else:
+            st.error(f"❌ {message}")
 
 def show_dormitory_requests_with_control(dormitory):
     df = load_requests_by_dormitory(dormitory)
