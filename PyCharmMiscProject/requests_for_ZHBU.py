@@ -731,25 +731,25 @@ def show_all_requests_with_control():
             st.session_state.show_bulk_delete_confirm_all = True
             st.session_state.bulk_delete_ids_all = selected_ids
             
-            with col2:
-                new_status_bulk = st.selectbox(
-                    ["Новая", "В работе", "Выполнена"], 
-                    key="bulk_status_all"
-                )
-                if st.button(f"🔄 Изменить статус ({len(selected_ids)})", use_container_width=True, key="bulk_update_all"):
-                    success_count = 0
-                    for id in selected_ids:
-                        if update_status_with_notification(id, new_status_bulk):
-                            success_count += 1
-                    if success_count > 0:
-                        st.success(f"✅ Статус изменен для {success_count} заявок")
-                        time.sleep(1)
-                        st.rerun()
-                    else:
-                        st.error("❌ Ошибка при обновлении статусов")
+        with col2:
+            new_status_bulk = st.selectbox(
+                ["Новая", "В работе", "Выполнена"], 
+                key="bulk_status_all"
+            )
+            if st.button(f"🔄 Изменить статус ({len(selected_ids)})", use_container_width=True, key="bulk_update_all"):
+                success_count = 0
+                for id in selected_ids:
+                    if update_status_with_notification(id, new_status_bulk):
+                        success_count += 1
+                if success_count > 0:
+                    st.success(f"✅ Статус изменен для {success_count} заявок")
+                    time.sleep(1)
+                    st.rerun()
+                else:
+                    st.error("❌ Ошибка при обновлении статусов")
                 
-            # Диалог подтверждения массового удаления
-            if st.session_state.get('show_bulk_delete_confirm_all', False):
+        # Диалог подтверждения массового удаления
+        if st.session_state.get('show_bulk_delete_confirm_all', False):
                 with st.container():
                     st.warning(f"⚠️ Удалить {len(st.session_state.bulk_delete_ids_all)} заявок?")
                     col_yes, col_no = st.columns(2)
@@ -773,7 +773,7 @@ def show_all_requests_with_control():
                             st.session_state.show_bulk_delete_confirm_all = False
                             st.session_state.bulk_delete_ids_all = []
                             st.rerun()
-        else:
+    else:
             st.info("ℹ️ Отметьте заявки в колонке 'Выбрать' для редактирования")
         
         excel_data = to_excel(filtered_df)
