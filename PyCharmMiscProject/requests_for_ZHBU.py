@@ -175,6 +175,66 @@ def to_excel(df):
     output = BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
         df.to_excel(writer, index=False, sheet_name='Заявки')
+        
+        # Получаем рабочую книгу и лист
+        workbook = writer.book
+        worksheet = writer.sheets['Заявки']
+        
+        from openpyxl.styles import Alignment
+        
+        # Настраиваем ширину колонок
+        for column in worksheet.columns:
+            max_length = 0
+            column_letter = column[0].column_letter
+            
+            # Проверяем длину заголовка
+            header = column[0].value
+            if header:
+                max_length = len(str(header)) * 1.2
+            
+            # Проверяем длину данных в колонке
+            for cell in list(column)[1:]:  # Пропускаем заголовок
+                if cell.value:
+                    # Для длинного текста (описание) делаем больше ширину
+                    text = str(cell.value)
+                    length = len(text) * 1.2
+                    
+                    # Для колонки "Описание" делаем шире
+                    if column_letter == 'I':  # Колонка с описанием
+                        length = min(length, 80)  # Ограничиваем до 80
+                    else:
+                        length = min(length, 40)  # Остальные до 40
+                    
+                    if length > max_length:
+                        max_length = length
+            
+            # Устанавливаем ширину
+            adjusted_width = max(max_length + 2, 12)
+            worksheet.column_dimensions[column_letter].width = adjusted_width
+        
+        # Настраиваем высоту строк и выравнивание
+        for row in worksheet.iter_rows():
+            # Высота строки
+            worksheet.row_dimensions[row[0].row].height = 25
+            
+            # Выравнивание для каждой ячейки
+            for cell in row:
+                # Для колонки с описанием включаем перенос текста
+                if cell.column_letter == 'I':  # Колонка с описанием
+                    cell.alignment = Alignment(
+                        horizontal='left',
+                        vertical='center',
+                        wrap_text=True  # Перенос текста
+                    )
+                else:
+                    cell.alignment = Alignment(
+                        horizontal='left',
+                        vertical='center'
+                    )
+        
+        # Закрепляем заголовки
+        worksheet.freeze_panes = 'A2'
+        
     return output.getvalue()
 
 def show_statistics():
