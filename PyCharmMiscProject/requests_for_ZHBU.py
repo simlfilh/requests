@@ -679,9 +679,23 @@ def show_all_requests_with_control():
     st.markdown("---")
     
     if not filtered_df.empty:
-        # Добавляем колонку для выбора
+        # СОЗДАЕМ КЛЮЧ ДЛЯ ХРАНЕНИЯ СОСТОЯНИЯ ЧЕКБОКСОВ
+        checkbox_key_all = "checkbox_all_state"
+        
+        # Инициализируем состояние чекбоксов, если его нет
+        if checkbox_key_all not in st.session_state:
+            st.session_state[checkbox_key_all] = {i: False for i in range(len(filtered_df))}
+        
+        # Создаем копию DataFrame для отображения с чекбоксами
         edit_df = filtered_df.copy()
-        edit_df.insert(0, "Выбрать", False)
+        edit_df = edit_df.reset_index(drop=True)
+        
+        # Добавляем колонку с чекбоксами
+        checkbox_values = []
+        for i in range(len(edit_df)):
+            checkbox_values.append(st.session_state[checkbox_key_all].get(i, False))
+        
+        edit_df.insert(0, "Выбрать", checkbox_values)
         
         # Уникальный ключ для data_editor
         editor_key = "data_editor_all"
@@ -711,8 +725,15 @@ def show_all_requests_with_control():
             key=editor_key
         )
         
+        # Обновляем состояние чекбоксов из отредактированной таблицы
+        for i in range(len(edited_df)):
+            st.session_state[checkbox_key_all][i] = edited_df.loc[i, "Выбрать"]
+        
         # Получаем выбранные ID
-        selected_ids = edited_df[edited_df["Выбрать"] == True]["ID"].tolist()
+        selected_ids = []
+        for i in range(len(edited_df)):
+            if edited_df.loc[i, "Выбрать"]:
+                selected_ids.append(edit_df.loc[i, "ID"])
         
         if selected_ids:
             st.success(f"✅ Выбрано заявок: {len(selected_ids)}")
@@ -725,16 +746,20 @@ def show_all_requests_with_control():
         with col1:
             # Кнопка "Выбрать все"
             if st.button("✅ Выбрать все", use_container_width=True, key="select_all_all"):
-                # Обновляем данные в data_editor через session_state
-                for idx in range(len(edit_df)):
-                    st.session_state[f"{editor_key}_{idx}_Выбрать"] = True
+                for i in range(len(edit_df)):
+                    st.session_state[checkbox_key_all][i] = True
                 st.rerun()
             
             # Кнопка "Снять все"
             if st.button("❌ Снять все", use_container_width=True, key="deselect_all_all"):
-                for idx in range(len(edit_df)):
-                    st.session_state[f"{editor_key}_{idx}_Выбрать"] = False
+                for i in range(len(edit_df)):
+                    st.session_state[checkbox_key_all][i] = False
                 st.rerun()
+            
+            # Кнопка "Удалить"
+            if st.button(f"🗑️ Удалить ({len(selected_ids)})", use_container_width=True, key="bulk_delete_all", type="primary"):
+                st.session_state.show_bulk_delete_confirm_all = True
+                st.session_state.bulk_delete_ids_all = selected_ids
         
         with col2:
             # Выбор статуса (без лейбла)
@@ -742,7 +767,7 @@ def show_all_requests_with_control():
                 "Новый статус",
                 ["Новая", "В работе", "Выполнена"],
                 key="bulk_status_all",
-                label_visibility="collapsed"  # Скрываем лейбл
+                label_visibility="collapsed"
             )
             
             # Кнопка "Изменить статус"
@@ -754,8 +779,8 @@ def show_all_requests_with_control():
                 if success_count > 0:
                     st.success(f"✅ Статус изменен для {success_count} заявок")
                     # Сбрасываем выделение
-                    for idx in range(len(edit_df)):
-                        st.session_state[f"{editor_key}_{idx}_Выбрать"] = False
+                    for i in range(len(edit_df)):
+                        st.session_state[checkbox_key_all][i] = False
                     time.sleep(1)
                     st.rerun()
                 else:
@@ -778,21 +803,21 @@ def show_all_requests_with_control():
                             st.session_state.show_bulk_delete_confirm_all = False
                             st.session_state.bulk_delete_ids_all = []
                             # Сбрасываем выделение
-                            for idx in range(len(edit_df)):
-                                st.session_state[f"{editor_key}_{idx}_Выбрать"] = False
+                            for i in range(len(edit_df)):
+                                st.session_state[checkbox_key_all][i] = False
                             time.sleep(1)
                             st.rerun()
                         else:
                             st.error("❌ Ошибка при удалении")
-                with col_no:
-                    if st.button("❌ Нет", use_container_width=True, key="cancel_bulk_all"):
-                        st.session_state.show_bulk_delete_confirm_all = False
-                        st.session_state.bulk_delete_ids_all = []
-                        st.rerun()
-
-        if st.button(f"🗑️ Удалить ({len(selected_ids)})", use_container_width=True, key="bulk_delete_all", type="primary"):
-                st.session_state.show_bulk_delete_confirm_all = True
-                st.session_state.bulk_delete_ids_all = selected_ids
+                    with col_no:
+                        if st.button("❌ Нет", use_container_width=True, key="cancel_bulk_all"):
+                            st.session_state.show_bulk_delete_confirm_all = False
+                            st.session_state.bulk_delete_ids_all = []
+                            st.rerun()
+        
+        # Экспорт в Excel
+        st.markdown("---")
+        st.subheader("📥 Экспорт данных")
         
         excel_data = to_excel(filtered_df)
         st.download_button(
@@ -805,8 +830,6 @@ def show_all_requests_with_control():
         )
     else:
         st.warning("Нет заявок для отображения")
-
-    
         
 if __name__ == "__main__":
     main()
