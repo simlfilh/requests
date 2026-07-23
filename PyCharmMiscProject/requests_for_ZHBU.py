@@ -182,7 +182,7 @@ def to_excel(df):
         
         from openpyxl.styles import Alignment
         
-        # Устанавливаем ширину колонок
+        # Устанавливаем ширину колонок (без изменений)
         column_widths = {
             'A': 4, 'B': 11, 'C': 9, 'D': 30, 'E': 29,
             'F': 37, 'G': 8, 'H': 16, 'I': 60, 'J': 11
@@ -190,11 +190,37 @@ def to_excel(df):
         for col_letter, width in column_widths.items():
             worksheet.column_dimensions[col_letter].width = width
         
-        # Устанавливаем высоту для всех строк (кроме заголовка)
+        # Автоматическая высота строк с переносом текста
         for row_idx in range(2, worksheet.max_row + 1):
-            worksheet.row_dimensions[row_idx].height = 35  # Фиксированная высота
+            max_height = 25  # Минимальная высота
+            
+            # Проверяем все ячейки в строке
+            for col_letter in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']:
+                cell = worksheet[f'{col_letter}{row_idx}']
+                if cell.value:
+                    text = str(cell.value)
+                    
+                    # Для колонки с описанием (I) считаем высоту отдельно
+                    if col_letter == 'I':
+                        # Считаем примерное количество строк
+                        # Ширина колонки I = 60, примерно 10-12 символов в строке
+                        chars_per_line = 60  # примерно
+                        lines = (len(text) // chars_per_line) + 1
+                        height_needed = lines * 18  # 18 пикселей на строку
+                        if height_needed > max_height:
+                            max_height = min(height_needed, 150)  # Максимум 150 пикселей
+                    else:
+                        # Для остальных колонок если текст длинный
+                        if len(text) > 30:
+                            lines = (len(text) // 30) + 1
+                            height_needed = lines * 18
+                            if height_needed > max_height:
+                                max_height = min(height_needed, 80)
+            
+            # Устанавливаем высоту строки
+            worksheet.row_dimensions[row_idx].height = max_height
         
-        # Устанавливаем выравнивание
+        # Устанавливаем выравнивание (с переносом для описания)
         for row in worksheet.iter_rows():
             for cell in row:
                 if cell.column_letter == 'I':  # Описание
