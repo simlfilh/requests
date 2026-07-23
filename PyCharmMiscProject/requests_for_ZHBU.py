@@ -792,7 +792,7 @@ def show_all_requests_with_control():
         col1, col2 = st.columns(2)
         
         with col1:
-            # Кнопка "Выбрать все"
+            # Кнопка "Выбрать все" - ЗЕЛЕНАЯ
             st.markdown('<div class="green-button">', unsafe_allow_html=True)
             if st.button("✅ Выбрать все", use_container_width=True, key="select_all_all"):
                 for i in range(len(edit_df)):
@@ -800,11 +800,16 @@ def show_all_requests_with_control():
                 st.rerun()
             st.markdown('</div>', unsafe_allow_html=True)
             
-            # Кнопка "Снять все"
+            # Кнопка "Снять все" - СТАНДАРТНАЯ (без type)
             if st.button("❌ Снять все", use_container_width=True, key="deselect_all_all", type="primary"):
                 for i in range(len(edit_df)):
                     st.session_state[checkbox_key_all][i] = False
                 st.rerun()
+            
+            # Кнопка "Удалить" - СТАНДАРТНАЯ (без обертки)
+            if st.button(f"🗑️ Удалить ({len(selected_ids)})", use_container_width=True, key="bulk_delete_all"):
+                st.session_state.show_bulk_delete_confirm_all = True
+                st.session_state.bulk_delete_ids_all = selected_ids
         
         with col2:
             # Выбор статуса (без лейбла)
@@ -815,7 +820,7 @@ def show_all_requests_with_control():
                 label_visibility="collapsed"
             )
             
-            # Кнопка "Изменить статус"
+            # Кнопка "Изменить статус" - ГОЛУБАЯ
             st.markdown('<div class="blue-button">', unsafe_allow_html=True)
             if st.button(f"🔄 Изменить статус ({len(selected_ids)})", use_container_width=True, key="bulk_update_all"):
                 success_count = 0
@@ -861,12 +866,9 @@ def show_all_requests_with_control():
                             st.session_state.show_bulk_delete_confirm_all = False
                             st.session_state.bulk_delete_ids_all = []
                             st.rerun()
-
-        if st.button(f"🗑️ Удалить ({len(selected_ids)})", use_container_width=True, key="bulk_delete_all"):
-                st.session_state.show_bulk_delete_confirm_all = True
-                st.session_state.bulk_delete_ids_all = selected_ids
-            
+        
         excel_data = to_excel(filtered_df)
+        # Кнопка "Скачать в Excel" - РОЗОВАЯ
         st.markdown('<div class="pink-button">', unsafe_allow_html=True)
         st.download_button(
             label="📊 Скачать в Excel формате",
