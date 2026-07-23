@@ -481,22 +481,22 @@ def main():
     if "refresh_count" not in st.session_state:
         st.session_state.refresh_count = 0
 
-    # Шапка и аутентификация
-    col1, col2 = st.columns([5, 2])
-    with col1:
-        st.title("🔐 Панель сотрудника ЖБУ | Управление электронными заявками")
     
-        if not st.session_state.authenticated:
-            with st.form("login_form"):
-                password_input = st.text_input("Введите пароль для доступа", type="password")
-                submitted = st.form_submit_button("Войти")
-                if submitted:
-                    if password_input == PASSWORD:
-                        st.session_state.authenticated = True
-                        st.rerun()
-                    else:
-                        st.error("❌ Неверный пароль!")
-            return
+    st.title("🔐 Панель сотрудника ЖБУ | Управление электронными заявками")
+    
+    if not st.session_state.authenticated:
+        with st.form("login_form"):
+            password_input = st.text_input("Введите пароль для доступа", type="password")
+            submitted = st.form_submit_button("Войти")
+            if submitted:
+                if password_input == PASSWORD:
+                    st.session_state.authenticated = True
+                    st.rerun()
+                else:
+                    st.error("❌ Неверный пароль!")
+        return
+    
+    col1, col2 = st.columns([5, 2])
     
     with col2:
         st.write("")
