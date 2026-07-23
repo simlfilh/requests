@@ -393,7 +393,6 @@ def show_dormitory_requests_with_control(dormitory):
                 st.session_state[f"show_bulk_delete_confirm_{dormitory}_{category}"] = True
                 st.session_state[f"bulk_delete_ids_{dormitory}_{category}"] = selected_ids
         
-        # ПРАВЫЙ СТОЛБЕЦ: Выбор статуса, Изменить статус, Экспорт
         with col_right:
             new_status_bulk = st.selectbox(
                     "Новый статус", 
