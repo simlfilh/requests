@@ -402,7 +402,7 @@ def show_dormitory_requests_with_control(dormitory):
                     label_visibility="collapsed"
                 )
                 
-            if st.button(f"🔄 Изменить", use_container_width=True, key=f"bulk_update_{dormitory}_{category}"):
+            if st.button(f"🔄 Изменить статус ({len(selected_ids)})", use_container_width=True, key=f"bulk_update_{dormitory}_{category}"):
                     success_count = 0
                     for id in selected_ids:
                         if update_status_with_notification(id, new_status_bulk):
