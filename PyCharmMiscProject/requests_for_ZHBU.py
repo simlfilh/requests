@@ -755,11 +755,6 @@ def show_all_requests_with_control():
                 for i in range(len(edit_df)):
                     st.session_state[checkbox_key_all][i] = False
                 st.rerun()
-            
-            # Кнопка "Удалить"
-            if st.button(f"🗑️ Удалить ({len(selected_ids)})", use_container_width=True, key="bulk_delete_all", type="primary"):
-                st.session_state.show_bulk_delete_confirm_all = True
-                st.session_state.bulk_delete_ids_all = selected_ids
         
         with col2:
             # Выбор статуса (без лейбла)
@@ -814,11 +809,11 @@ def show_all_requests_with_control():
                             st.session_state.show_bulk_delete_confirm_all = False
                             st.session_state.bulk_delete_ids_all = []
                             st.rerun()
-        
-        # Экспорт в Excel
-        st.markdown("---")
-        st.subheader("📥 Экспорт данных")
-        
+
+        if st.button(f"🗑️ Удалить ({len(selected_ids)})", use_container_width=True, key="bulk_delete_all", type="primary"):
+                st.session_state.show_bulk_delete_confirm_all = True
+                st.session_state.bulk_delete_ids_all = selected_ids
+            
         excel_data = to_excel(filtered_df)
         st.download_button(
             label="📊 Скачать в Excel формате",
