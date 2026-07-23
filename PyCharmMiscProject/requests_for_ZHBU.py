@@ -191,13 +191,13 @@ def to_excel(df):
             # Проверяем длину заголовка
             header = column[0].value
             if header:
-                max_length = len(str(header)) * 1.2
+                max_length = len(str(header)) * 1.05
             
             # Проверяем длину данных в колонке
             for cell in list(column)[1:]:  # Пропускаем заголовок
                 if cell.value:
                     text = str(cell.value)
-                    length = len(text) * 1.2
+                    length = len(text) * 1.05
                     
                     # Для колонки "Описание" делаем шире
                     if column_letter == 'I':  # Колонка с описанием
@@ -215,7 +215,7 @@ def to_excel(df):
         # Настраиваем высоту строк и выравнивание
         for row_idx, row in enumerate(worksheet.iter_rows(), start=1):
             # Определяем максимальную высоту для строки
-            max_height = 25  # Минимальная высота
+            max_height = 20  # Минимальная высота
             
             # Проверяем все ячейки в строке
             for cell in row:
