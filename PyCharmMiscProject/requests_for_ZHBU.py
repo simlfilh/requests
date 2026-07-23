@@ -427,7 +427,7 @@ def show_dormitory_requests_with_control(dormitory):
                 for i in range(len(display_cat_df)):
                     st.session_state[checkbox_key][i] = True
                 st.rerun()
-            st.markdown('<div>', unsafe_allow_html=True)
+            st.markdown('</div>', unsafe_allow_html=True)
             
             if st.button("❌ Снять все", use_container_width=True, key=f"deselect_all_{dormitory}_{category}", type="primary"):
                 for i in range(len(display_cat_df)):
@@ -460,7 +460,7 @@ def show_dormitory_requests_with_control(dormitory):
                         st.rerun()
                     else:
                         st.error("❌ Ошибка при обновлении статусов")
-            st.markdown('<div>', unsafe_allow_html=True)
+            st.markdown('</div>', unsafe_allow_html=True)
                         
             # Экспорт
             excel_data = to_excel(cat_df)
@@ -473,7 +473,7 @@ def show_dormitory_requests_with_control(dormitory):
                 use_container_width=True,
                 key=f"export_{dormitory}_{category}"
             )
-            st.markdown('<div>', unsafe_allow_html=True)
+            st.markdown('</div>', unsafe_allow_html=True)
         
         # Диалог подтверждения массового удаления
         confirm_key = f"show_bulk_delete_confirm_{dormitory}_{category}"
@@ -798,7 +798,7 @@ def show_all_requests_with_control():
                 for i in range(len(edit_df)):
                     st.session_state[checkbox_key_all][i] = True
                 st.rerun()
-            st.markdown('<div>', unsafe_allow_html=True)
+            st.markdown('</div>', unsafe_allow_html=True)
             
             # Кнопка "Снять все"
             if st.button("❌ Снять все", use_container_width=True, key="deselect_all_all", type="primary"):
@@ -831,7 +831,7 @@ def show_all_requests_with_control():
                     st.rerun()
                 else:
                     st.error("❌ Ошибка при обновлении статусов")
-            st.markdown('<div>', unsafe_allow_html=True)
+            st.markdown('</div>', unsafe_allow_html=True)
         
         # Диалог подтверждения массового удаления
         if st.session_state.get('show_bulk_delete_confirm_all', False):
@@ -876,7 +876,7 @@ def show_all_requests_with_control():
             use_container_width=True,
             key="export_all"
         )
-        st.markdown('<div>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
     else:
         st.warning("Нет заявок для отображения")
         
