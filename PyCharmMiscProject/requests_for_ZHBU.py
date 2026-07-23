@@ -9,50 +9,6 @@ from email.mime.multipart import MIMEMultipart
 import time
 import locale
 import os
-  
-st.markdown("""
-        <style>
-        .stButton > button {
-            width: 100%;
-        }
-        .green-button > button {
-            background-color: #4CAF50 !important;
-            color: white !important;
-            border-color: #4CAF50 !important;
-        }
-        .green-button > button:hover {
-            background-color: #45a049 !important;
-            border-color: #45a049 !important;
-        }
-        .blue-button > button {
-            background-color: #2196F3 !important;
-            color: white !important;
-            border-color: #2196F3 !important;
-        }
-        .blue-button > button:hover {
-            background-color: #1976D2 !important;
-            border-color: #1976D2 !important;
-        }
-        .pink-button > button {
-            background-color: #E91E63 !important;
-            color: white !important;
-            border-color: #E91E63 !important;
-        }
-        .pink-button > button:hover {
-            background-color: #C2185B !important;
-            border-color: #C2185B !important;
-        }
-        .red-button > button {
-            background-color: #f44336 !important;
-            color: white !important;
-            border-color: #f44336 !important;
-        }
-        .red-button > button:hover {
-            background-color: #d32f2f !important;
-            border-color: #d32f2f !important;
-        }
-        </style>
-    """, unsafe_allow_html=True)
 
 try:
     if os.name == 'nt':  # Windows
@@ -633,6 +589,51 @@ def main():
             show_dormitory_requests_with_control(st.session_state.selected_dormitory)
 
 def show_all_requests_with_control():
+
+  st.markdown("""
+        <style>
+        .stButton > button {
+            width: 100%;
+        }
+        .green-button > button {
+            background-color: #4CAF50 !important;
+            color: white !important;
+            border-color: #4CAF50 !important;
+        }
+        .green-button > button:hover {
+            background-color: #45a049 !important;
+            border-color: #45a049 !important;
+        }
+        .blue-button > button {
+            background-color: #2196F3 !important;
+            color: white !important;
+            border-color: #2196F3 !important;
+        }
+        .blue-button > button:hover {
+            background-color: #1976D2 !important;
+            border-color: #1976D2 !important;
+        }
+        .pink-button > button {
+            background-color: #E91E63 !important;
+            color: white !important;
+            border-color: #E91E63 !important;
+        }
+        .pink-button > button:hover {
+            background-color: #C2185B !important;
+            border-color: #C2185B !important;
+        }
+        .red-button > button {
+            background-color: #f44336 !important;
+            color: white !important;
+            border-color: #f44336 !important;
+        }
+        .red-button > button:hover {
+            background-color: #d32f2f !important;
+            border-color: #d32f2f !important;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+  
     """Функция для отображения всех заявок с управлением"""
     st.header("📋 Все заявки")
     
