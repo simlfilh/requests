@@ -292,14 +292,11 @@ def show_statistics():
     stats_df = pd.DataFrame(stats_data)
     st.dataframe(stats_df, use_container_width=True, hide_index=True)
 
-# НОВАЯ ФУНКЦИЯ: Чат с использованием st.chat_input
 def show_chat_modal(request_id, request_data):
     """Отображает чат для одной заявки с использованием st.chat_input"""
     
-    # Загружаем комментарии
     comments_df = load_comments(request_id)
     
-    # CSS для стилизации чата
     st.markdown("""
     <style>
     .chat-container {
@@ -342,17 +339,6 @@ def show_chat_modal(request_id, request_data):
         margin-bottom: 10px;
         border-left: 4px solid #4CAF50;
         box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        animation: fadeIn 0.3s ease-out;
-    }
-    @keyframes fadeIn {
-        from {
-            opacity: 0;
-            transform: translateY(-10px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
     }
     .chat-message .author {
         font-weight: bold;
@@ -375,9 +361,6 @@ def show_chat_modal(request_id, request_data):
         text-align: center;
         padding: 30px 0;
     }
-    .chat-author-select {
-        margin-bottom: 10px;
-    }
     .chat-close-btn {
         background: #e74c3c;
         color: white;
@@ -386,16 +369,13 @@ def show_chat_modal(request_id, request_data):
         padding: 8px 20px;
         cursor: pointer;
         font-weight: bold;
-        transition: all 0.3s;
     }
     .chat-close-btn:hover {
         background: #c0392b;
-        transform: scale(1.05);
     }
     </style>
     """, unsafe_allow_html=True)
     
-    # Создаем контейнер чата
     with st.container():
         st.markdown(f"""
         <div class="chat-container">
@@ -403,10 +383,9 @@ def show_chat_modal(request_id, request_data):
                 <h3>💬 Заявка #{request_id}</h3>
                 <button class="chat-close-btn" onclick="document.getElementById('close_chat_{request_id}').click();">✕ Закрыть</button>
             </div>
-            <div class="chat-messages-container" id="chatMessages">
+            <div class="chat-messages-container">
         """, unsafe_allow_html=True)
         
-        # Отображаем сообщения
         if not comments_df.empty:
             for _, comment in comments_df.iterrows():
                 author = comment.get('author', 'Сотрудник')
@@ -436,7 +415,6 @@ def show_chat_modal(request_id, request_data):
         
         st.markdown('</div>', unsafe_allow_html=True)
         
-        # Выбор автора
         author = st.selectbox(
             "Кто вы?",
             ["Сотрудник ЖБУ", "Технический специалист", "Мастер", "Администратор"],
@@ -444,14 +422,12 @@ def show_chat_modal(request_id, request_data):
             label_visibility="collapsed"
         )
         
-        # Поле для ввода сообщения с st.chat_input
         prompt = st.chat_input(
             "Введите сообщение...",
             key=f"chat_input_{request_id}",
         )
         
         if prompt:
-            # Отправляем сообщение
             success, message = add_comment(request_id, prompt, author)
             if success:
                 st.success("✅ Сообщение отправлено!")
@@ -460,12 +436,10 @@ def show_chat_modal(request_id, request_data):
             else:
                 st.error(f"❌ {message}")
         
-        # Кнопка закрытия (скрытая, используется для закрытия через session_state)
         if st.button("Закрыть", key=f"close_chat_{request_id}", use_container_width=True, type="secondary"):
             st.session_state[f"chat_open_{request_id}"] = False
             st.rerun()
 
-# Функция для массового комментария
 def show_bulk_comment_modal(selected_ids, dormitory, category):
     """Отображает модальное окно для массового комментария"""
     
@@ -478,17 +452,6 @@ def show_bulk_comment_modal(selected_ids, dormitory, category):
         padding: 20px;
         margin: 20px 0;
         box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-        animation: slideIn 0.3s ease-out;
-    }
-    @keyframes slideIn {
-        from {
-            opacity: 0;
-            transform: translateY(-20px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
     }
     .bulk-modal-header {
         display: flex;
@@ -519,21 +482,17 @@ def show_bulk_comment_modal(selected_ids, dormitory, category):
         </div>
         """, unsafe_allow_html=True)
         
-        # Список выбранных заявок
         with st.expander(f"📋 Показать выбранные заявки ({len(selected_ids)})"):
-            # Показываем в несколько колонок
             cols = st.columns(4)
             for idx, req_id in enumerate(selected_ids):
                 cols[idx % 4].markdown(f"- Заявка #{req_id}")
         
-        # Выбор автора
         bulk_author = st.selectbox(
             "Кто вы?",
             ["Сотрудник ЖБУ", "Технический специалист", "Мастер", "Администратор"],
             key=f"bulk_author_{dormitory}_{category}"
         )
         
-        # Текст комментария через chat_input для массового комментария
         bulk_comment = st.chat_input(
             "Введите комментарий для всех выбранных заявок...",
             key=f"bulk_chat_input_{dormitory}_{category}"
@@ -544,7 +503,6 @@ def show_bulk_comment_modal(selected_ids, dormitory, category):
             if success_count > 0:
                 st.success(message)
                 time.sleep(1)
-                # Закрываем модальное окно
                 if dormitory == "all" and category == "all":
                     st.session_state["show_bulk_comment_all"] = False
                 else:
@@ -553,7 +511,6 @@ def show_bulk_comment_modal(selected_ids, dormitory, category):
             else:
                 st.error(f"❌ {message}")
         
-        # Кнопка закрытия
         if st.button("❌ Закрыть", use_container_width=True, key=f"close_bulk_{dormitory}_{category}"):
             if dormitory == "all" and category == "all":
                 st.session_state["show_bulk_comment_all"] = False
@@ -711,33 +668,27 @@ def show_dormitory_requests_with_control(dormitory):
             if edited_df.loc[i, "Выбрать"]:
                 selected_ids.append(display_cat_df.loc[i, "ID"])
         
-        # Блок для комментариев
         if selected_ids:
             st.success(f"✅ Выбрано заявок: {len(selected_ids)}")
             
-            # Кнопка для массового комментария
             if len(selected_ids) > 1:
                 if st.button(f"💬 Добавить комментарий ко всем ({len(selected_ids)})", 
                            key=f"bulk_comment_btn_{dormitory}_{category}", 
                            use_container_width=True):
                     st.session_state[f"show_bulk_comment_{dormitory}_{category}"] = True
             
-            # Если выбрана одна заявка - открываем чат
             if len(selected_ids) == 1:
                 selected_id = selected_ids[0]
                 request_data = display_cat_df[display_cat_df["ID"] == selected_id].iloc[0]
                 
-                # Кнопка для открытия чата
                 if st.button(f"💬 Открыть чат к заявке #{selected_id}", 
                            key=f"open_chat_{selected_id}", 
                            use_container_width=True):
                     st.session_state[f"chat_open_{selected_id}"] = True
                 
-                # Открываем чат, если кнопка была нажата
                 if st.session_state.get(f"chat_open_{selected_id}", False):
                     show_chat_modal(selected_id, request_data)
             
-            # Показываем модальное окно для массового комментария
             if st.session_state.get(f"show_bulk_comment_{dormitory}_{category}", False):
                 show_bulk_comment_modal(selected_ids, dormitory, category)
         
@@ -841,7 +792,6 @@ def main():
     if "refresh_count" not in st.session_state:
         st.session_state.refresh_count = 0
     
-    # Инициализация состояния для чатов
     for dorm in DORMITORIES:
         for category in ["🔧 Сантехника", "⚡ Электрика", "🔨 Плотник", "🍵 Плиты", "🧹 Уборка", "❓ Вопрос / Другое"]:
             key = f"show_bulk_comment_{dorm}_{category}"
@@ -1078,14 +1028,12 @@ def show_all_requests_with_control():
         if selected_ids:
             st.success(f"✅ Выбрано заявок: {len(selected_ids)}")
             
-            # Массовый комментарий для всех заявок
             if len(selected_ids) > 1:
                 if st.button(f"💬 Добавить комментарий ко всем ({len(selected_ids)})", 
                            key="bulk_comment_all", 
                            use_container_width=True):
                     st.session_state["show_bulk_comment_all"] = True
             
-            # Чат для одной заявки
             if len(selected_ids) == 1:
                 selected_id = selected_ids[0]
                 request_data = edit_df[edit_df["ID"] == selected_id].iloc[0]
@@ -1098,7 +1046,6 @@ def show_all_requests_with_control():
                 if st.session_state.get(f"chat_open_{selected_id}", False):
                     show_chat_modal(selected_id, request_data)
             
-            # Модальное окно для массового комментария (все заявки)
             if st.session_state.get("show_bulk_comment_all", False):
                 show_bulk_comment_modal(selected_ids, "all", "all")
         else:
