@@ -611,12 +611,25 @@ def show_all_requests_with_control():
     
     # Добавляем фильтры
     st.subheader("🔍 Фильтры")
-    col1, col2, col3 = st.columns(3)
+    
+    # Определяем типы заявок для фильтра
+    request_types = ["Все"] + [
+        "🔧 Сантехника",
+        "⚡ Электрика",
+        "🔨 Плотник",
+        "🍵 Плиты",
+        "🧹 Уборка",
+        "❓ Вопрос / Другое"
+    ]
+    
+    col1, col2, col3, col4 = st.columns(4)
     with col1:
         status_filter_all = st.selectbox("Статус", ["Все", "Новая", "В работе", "Выполнена"], key="status_all")
     with col2:
         dorm_filter_all = st.selectbox("Общежитие", ["Все"] + [d.split('|')[0].strip() for d in DORMITORIES], key="dorm_all_filter")
     with col3:
+        type_filter_all = st.selectbox("Тип заявки", request_types, key="type_all_filter")
+    with col4:
         date_options_all = ["Все", "Сегодня", "Вчера", "Выбрать дату", "Выбрать период"]
         date_filter_all = st.selectbox("Период", date_options_all, key="date_all_filter")
     
@@ -628,6 +641,9 @@ def show_all_requests_with_control():
     
     if dorm_filter_all != "Все":
         filtered_df = filtered_df[filtered_df["Общежитие"].str.contains(dorm_filter_all)]
+    
+    if type_filter_all != "Все":
+        filtered_df = filtered_df[filtered_df["Тип заявки"] == type_filter_all]
     
     today = datetime.now().date()
     
@@ -782,6 +798,6 @@ def show_all_requests_with_control():
         )
     else:
         st.warning("Нет заявок для отображения")
-
+        
 if __name__ == "__main__":
     main()
