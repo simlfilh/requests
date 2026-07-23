@@ -184,8 +184,8 @@ def to_excel(df):
         
         # Устанавливаем ширину колонок
         column_widths = {
-            'A': 5, 'B': 10, 'C': 8, 'D': 30, 'E': 35,
-            'F': 30, 'G': 9, 'H': 16, 'I': 60, 'J': 10
+            'A': 4, 'B': 11, 'C': 9, 'D': 28, 'E': 30,
+            'F': 35, 'G': 8, 'H': 16, 'I': 60, 'J': 11
         }
         for col_letter, width in column_widths.items():
             worksheet.column_dimensions[col_letter].width = width
