@@ -679,9 +679,7 @@ def show_all_requests_with_control():
     with col4:
         st.metric("Выполнено", len(filtered_df[filtered_df["Статус"] == "Выполнена"]))
     
-    # Управление через data_editor
     st.markdown("---")
-    st.subheader("✅ Управление заявками")
     
     if not filtered_df.empty:
         # Добавляем колонку для выбора
@@ -782,10 +780,6 @@ def show_all_requests_with_control():
                             st.rerun()
         else:
             st.info("ℹ️ Отметьте заявки в колонке 'Выбрать' для редактирования")
-        
-        # Экспорт
-        st.markdown("---")
-        st.subheader("📥 Экспорт данных")
         
         excel_data = to_excel(filtered_df)
         st.download_button(
