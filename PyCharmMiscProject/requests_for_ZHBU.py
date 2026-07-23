@@ -735,11 +735,6 @@ def show_all_requests_with_control():
                 for idx in range(len(edit_df)):
                     st.session_state[f"{editor_key}_{idx}_Выбрать"] = False
                 st.rerun()
-            
-            # Кнопка "Удалить"
-            if st.button(f"🗑️ Удалить ({len(selected_ids)})", use_container_width=True, key="bulk_delete_all", type="primary"):
-                st.session_state.show_bulk_delete_confirm_all = True
-                st.session_state.bulk_delete_ids_all = selected_ids
         
         with col2:
             # Выбор статуса (без лейбла)
@@ -794,10 +789,10 @@ def show_all_requests_with_control():
                         st.session_state.show_bulk_delete_confirm_all = False
                         st.session_state.bulk_delete_ids_all = []
                         st.rerun()
-        
-        # Экспорт в Excel
-        st.markdown("---")
-        st.subheader("📥 Экспорт данных")
+
+        if st.button(f"🗑️ Удалить ({len(selected_ids)})", use_container_width=True, key="bulk_delete_all", type="primary"):
+                st.session_state.show_bulk_delete_confirm_all = True
+                st.session_state.bulk_delete_ids_all = selected_ids
         
         excel_data = to_excel(filtered_df)
         st.download_button(
@@ -810,6 +805,8 @@ def show_all_requests_with_control():
         )
     else:
         st.warning("Нет заявок для отображения")
+
+    
         
 if __name__ == "__main__":
     main()
