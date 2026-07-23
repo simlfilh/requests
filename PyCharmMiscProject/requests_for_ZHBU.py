@@ -94,6 +94,9 @@ def add_bulk_comments(request_ids, comment_text, author_name):
     
     for request_id in request_ids:
         try:
+            # Преобразуем request_id в int, если это numpy.int64
+            request_id = int(request_id)
+            
             data = {
                 'request_id': request_id,
                 'comment': comment_text,
