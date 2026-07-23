@@ -191,19 +191,19 @@ def to_excel(df):
             # Проверяем длину заголовка
             header = column[0].value
             if header:
-                max_length = len(str(header)) * 1.05
+                max_length = len(str(header)) * 1.2
             
             # Проверяем длину данных в колонке
             for cell in list(column)[1:]:  # Пропускаем заголовок
                 if cell.value:
                     text = str(cell.value)
-                    length = len(text) * 1.05
+                    length = len(text) * 1.2
                     
                     # Для колонки "Описание" делаем шире
                     if column_letter == 'I':  # Колонка с описанием
                         length = min(length, 80)
                     else:
-                        length = min(length, 40)
+                        length = min(length, 20)
                     
                     if length > max_length:
                         max_length = length
