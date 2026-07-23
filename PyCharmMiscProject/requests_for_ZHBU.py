@@ -546,7 +546,6 @@ def main():
     # Отображение всех заявок
     elif st.session_state.show_all_requests:
         show_all_requests_with_control()
-        st.divider()
     
     # Основная таблица с заявками (по умолчанию)
     else:
