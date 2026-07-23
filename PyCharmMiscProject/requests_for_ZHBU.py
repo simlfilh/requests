@@ -461,8 +461,6 @@ def show_dormitory_requests_with_control(dormitory):
                         st.session_state[confirm_key] = False
                         st.session_state[f"bulk_delete_ids_{dormitory}_{category}"] = []
                         st.rerun()
-                
-        st.markdown("---")  # Разделитель между типами
         
 def main():
     # Инициализация session_state
