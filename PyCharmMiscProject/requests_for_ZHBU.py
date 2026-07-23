@@ -711,30 +711,28 @@ def show_all_requests_with_control():
         # Получаем выбранные ID
         selected_ids = edited_df[edited_df["Выбрать"] == True]["ID"].tolist()
         
-        if selected_ids:
-            st.success(f"✅ Выбрано заявок: {len(selected_ids)}")
+        st.success(f"✅ Выбрано заявок: {len(selected_ids)}")
             
-            # РАЗДЕЛЯЕМ НА 4 КОЛОНКИ
-            col1, col2 = st.columns(2)
+        # РАЗДЕЛЯЕМ НА 4 КОЛОНКИ
+        col1, col2 = st.columns(2)
             
-            with col1:
-                if st.button("✅ Выбрать все", use_container_width=True, key="select_all_all"):
-                    for idx in edit_df.index:
-                        st.session_state[f"data_editor_all_{idx}"] = True
-                    st.rerun()
+        with col1:
+            if st.button("✅ Выбрать все", use_container_width=True, key="select_all_all"):
+                for idx in edit_df.index:
+                    st.session_state[f"data_editor_all_{idx}"] = True
+                st.rerun()
             
-                if st.button("❌ Снять все", use_container_width=True, key="deselect_all_all"):
-                    for idx in edit_df.index:
-                        st.session_state[f"data_editor_all_{idx}"] = False
-                    st.rerun()
+            if st.button("❌ Снять все", use_container_width=True, key="deselect_all_all"):
+                for idx in edit_df.index:
+                    st.session_state[f"data_editor_all_{idx}"] = False
+                st.rerun()
 
-                if st.button(f"🗑️ Удалить ({len(selected_ids)})", use_container_width=True, key="bulk_delete_all", type="primary"):
-                    st.session_state.show_bulk_delete_confirm_all = True
-                    st.session_state.bulk_delete_ids_all = selected_ids
+        if st.button(f"🗑️ Удалить ({len(selected_ids)})", use_container_width=True, key="bulk_delete_all", type="primary"):
+            st.session_state.show_bulk_delete_confirm_all = True
+            st.session_state.bulk_delete_ids_all = selected_ids
             
             with col2:
                 new_status_bulk = st.selectbox(
-                    "Новый статус", 
                     ["Новая", "В работе", "Выполнена"], 
                     key="bulk_status_all"
                 )
