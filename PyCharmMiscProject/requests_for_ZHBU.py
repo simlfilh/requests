@@ -173,15 +173,24 @@ def send_status_notification(student_email, student_name, request_id, new_status
 
 def to_excel(df):
     output = BytesIO()
+    
+    # Выбираем только нужные колонки
+    columns_to_keep = ['Дата', 'ФИО студента', 'Комната', 'Тип заявки', 'Описание']
+    
+    # Проверяем, какие колонки есть в DataFrame
+    available_columns = [col for col in columns_to_keep if col in df.columns]
+    
+    # Создаем копию только с нужными колонками
+    df_filtered = df[available_columns].copy()
+    
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        df.to_excel(writer, index=False, sheet_name='Заявки')
+        df_filtered.to_excel(writer, index=False, sheet_name='Заявки')
         
         # Получаем рабочую книгу и лист
         workbook = writer.book
         worksheet = writer.sheets['Заявки']
         
         from openpyxl.styles import Alignment
-        from openpyxl.utils import get_column_letter
         
         # Настраиваем ширину колонок
         for column in worksheet.columns:
@@ -194,13 +203,13 @@ def to_excel(df):
                 max_length = len(str(header)) * 1.2
             
             # Проверяем длину данных в колонке
-            for cell in list(column)[1:]:  # Пропускаем заголовок
+            for cell in list(column)[1:]:
                 if cell.value:
                     text = str(cell.value)
                     length = len(text) * 1.2
                     
                     # Для колонки "Описание" делаем шире
-                    if column_letter == 'I':  # Колонка с описанием
+                    if column_letter == 'E':  # Описание (теперь 5-я колонка)
                         length = min(length, 80)
                     else:
                         length = min(length, 35)
@@ -214,34 +223,28 @@ def to_excel(df):
         
         # Настраиваем высоту строк и выравнивание
         for row_idx, row in enumerate(worksheet.iter_rows(), start=1):
-            # Определяем максимальную высоту для строки
-            max_height = 20  # Минимальная высота
+            max_height = 25
             
-            # Проверяем все ячейки в строке
             for cell in row:
                 if cell.value:
-                    # Считаем количество строк в тексте (по переносам)
                     text = str(cell.value)
                     lines = text.count('\n') + 1
                     
-                    # Для длинного текста увеличиваем высоту
                     if len(text) > 50:
-                        # Примерный расчет: каждые 50 символов - новая строка
                         estimated_lines = max(1, (len(text) // 50) + 1)
-                        height_needed = estimated_lines * 18  # 18 пикселей на строку
+                        height_needed = estimated_lines * 18
                         if height_needed > max_height:
-                            max_height = min(height_needed, 140)  # Максимум 120 пикселей
+                            max_height = min(height_needed, 160)
             
-            # Устанавливаем высоту строки
             worksheet.row_dimensions[row[0].row].height = max_height
             
             # Выравнивание для каждой ячейки
             for cell in row:
                 # Для колонки с описанием включаем перенос текста
-                if cell.column_letter == 'I':  # Колонка с описанием
+                if cell.column_letter == 'E':  # Описание (теперь 5-я колонка)
                     cell.alignment = Alignment(
                         horizontal='left',
-                        vertical='top',  # Выравнивание по верху для многострочного текста
+                        vertical='top',
                         wrap_text=True
                     )
                 else:
