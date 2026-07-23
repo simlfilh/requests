@@ -378,19 +378,17 @@ def show_dormitory_requests_with_control(dormitory):
         
         # ЛЕВЫЙ СТОЛБЕЦ: Выбрать все, Снять все, Удалить
         with col_left:
-            st.markdown('<div class="green-button">', unsafe_allow_html=True)
             if st.button("✅ Выбрать все", use_container_width=True, key=f"select_all_{dormitory}_{category}"):
                 for i in range(len(display_cat_df)):
                     st.session_state[checkbox_key][i] = True
                 st.rerun()
-            st.markdown('</div>', unsafe_allow_html=True)
             
-            if st.button("❌ Снять все", use_container_width=True, key=f"deselect_all_{dormitory}_{category}", type="primary"):
+            if st.button("❌ Снять все", use_container_width=True, key=f"deselect_all_{dormitory}_{category}"):
                 for i in range(len(display_cat_df)):
                     st.session_state[checkbox_key][i] = False
                 st.rerun()
             
-            if st.button(f"🗑️ Удалить ({len(selected_ids)})", use_container_width=True, key=f"bulk_delete_{dormitory}_{category}"):
+            if st.button(f"🗑️ Удалить ({len(selected_ids)})", use_container_width=True, key=f"bulk_delete_{dormitory}_{category}", type="primary"):
                 st.session_state[f"show_bulk_delete_confirm_{dormitory}_{category}"] = True
                 st.session_state[f"bulk_delete_ids_{dormitory}_{category}"] = selected_ids
         
@@ -402,7 +400,6 @@ def show_dormitory_requests_with_control(dormitory):
                     label_visibility="collapsed"
                 )
 
-            st.markdown('<div class="blue-button">', unsafe_allow_html=True)
             if st.button(f"🔄 Изменить статус ({len(selected_ids)})", use_container_width=True, key=f"bulk_update_{dormitory}_{category}"):
                     success_count = 0
                     for id in selected_ids:
@@ -416,11 +413,8 @@ def show_dormitory_requests_with_control(dormitory):
                         st.rerun()
                     else:
                         st.error("❌ Ошибка при обновлении статусов")
-            st.markdown('</div>', unsafe_allow_html=True)
                         
-            # Экспорт
             excel_data = to_excel(cat_df)
-            st.markdown('<div class="pink-button">', unsafe_allow_html=True)
             st.download_button(
                 label=f"📊 Скачать в Excel формате",
                 data=excel_data,
@@ -429,7 +423,6 @@ def show_dormitory_requests_with_control(dormitory):
                 use_container_width=True,
                 key=f"export_{dormitory}_{category}"
             )
-            st.markdown('</div>', unsafe_allow_html=True)
         
         # Диалог подтверждения массового удаления
         confirm_key = f"show_bulk_delete_confirm_{dormitory}_{category}"
