@@ -683,6 +683,9 @@ def show_all_requests_with_control():
         edit_df = filtered_df.copy()
         edit_df.insert(0, "Выбрать", False)
         
+        # Уникальный ключ для data_editor
+        editor_key = "data_editor_all"
+        
         # Отображаем редактируемую таблицу
         edited_df = st.data_editor(
             edit_df,
@@ -705,37 +708,49 @@ def show_all_requests_with_control():
                 ),
             },
             disabled=["ID", "Дата", "Время", "ФИО студента", "Email", "Общежитие", "Комната", "Тип заявки", "Описание", "Статус"],
-            key="data_editor_all"
+            key=editor_key
         )
         
         # Получаем выбранные ID
         selected_ids = edited_df[edited_df["Выбрать"] == True]["ID"].tolist()
         
-        st.success(f"✅ Выбрано заявок: {len(selected_ids)}")
-            
-        # РАЗДЕЛЯЕМ НА 4 КОЛОНКИ
+        if selected_ids:
+            st.success(f"✅ Выбрано заявок: {len(selected_ids)}")
+        else:
+            st.info("ℹ️ Отметьте заявки в колонке 'Выбрать' для редактирования")
+        
+        # РАЗДЕЛЯЕМ НА 2 КОЛОНКИ ДЛЯ КНОПОК УПРАВЛЕНИЯ
         col1, col2 = st.columns(2)
-            
+        
         with col1:
+            # Кнопка "Выбрать все"
             if st.button("✅ Выбрать все", use_container_width=True, key="select_all_all"):
-                for idx in edit_df.index:
-                    st.session_state[f"data_editor_all_{idx}"] = True
+                # Обновляем данные в data_editor через session_state
+                for idx in range(len(edit_df)):
+                    st.session_state[f"{editor_key}_{idx}_Выбрать"] = True
                 st.rerun()
             
+            # Кнопка "Снять все"
             if st.button("❌ Снять все", use_container_width=True, key="deselect_all_all"):
-                for idx in edit_df.index:
-                    st.session_state[f"data_editor_all_{idx}"] = False
+                for idx in range(len(edit_df)):
+                    st.session_state[f"{editor_key}_{idx}_Выбрать"] = False
                 st.rerun()
-
-        if st.button(f"🗑️ Удалить ({len(selected_ids)})", use_container_width=True, key="bulk_delete_all", type="primary"):
-            st.session_state.show_bulk_delete_confirm_all = True
-            st.session_state.bulk_delete_ids_all = selected_ids
             
+            # Кнопка "Удалить"
+            if st.button(f"🗑️ Удалить ({len(selected_ids)})", use_container_width=True, key="bulk_delete_all", type="primary"):
+                st.session_state.show_bulk_delete_confirm_all = True
+                st.session_state.bulk_delete_ids_all = selected_ids
+        
         with col2:
+            # Выбор статуса (без лейбла)
             new_status_bulk = st.selectbox(
-                ["Новая", "В работе", "Выполнена"], 
-                key="bulk_status_all"
+                "Новый статус",
+                ["Новая", "В работе", "Выполнена"],
+                key="bulk_status_all",
+                label_visibility="collapsed"  # Скрываем лейбл
             )
+            
+            # Кнопка "Изменить статус"
             if st.button(f"🔄 Изменить статус ({len(selected_ids)})", use_container_width=True, key="bulk_update_all"):
                 success_count = 0
                 for id in selected_ids:
@@ -743,38 +758,46 @@ def show_all_requests_with_control():
                         success_count += 1
                 if success_count > 0:
                     st.success(f"✅ Статус изменен для {success_count} заявок")
+                    # Сбрасываем выделение
+                    for idx in range(len(edit_df)):
+                        st.session_state[f"{editor_key}_{idx}_Выбрать"] = False
                     time.sleep(1)
                     st.rerun()
                 else:
                     st.error("❌ Ошибка при обновлении статусов")
-                
+        
         # Диалог подтверждения массового удаления
         if st.session_state.get('show_bulk_delete_confirm_all', False):
-                with st.container():
-                    st.warning(f"⚠️ Удалить {len(st.session_state.bulk_delete_ids_all)} заявок?")
-                    col_yes, col_no = st.columns(2)
-                    with col_yes:
-                        if st.button("✅ Да", key="confirm_bulk_all"):
-                            success_count = 0
-                            for id in st.session_state.bulk_delete_ids_all:
-                                success, _ = delete_request(id)
-                                if success:
-                                    success_count += 1
-                            if success_count > 0:
-                                st.success(f"✅ Удалено заявок: {success_count}")
-                                st.session_state.show_bulk_delete_confirm_all = False
-                                st.session_state.bulk_delete_ids_all = []
-                                time.sleep(1)
-                                st.rerun()
-                            else:
-                                st.error("❌ Ошибка при удалении")
-                    with col_no:
-                        if st.button("❌ Нет", key="cancel_bulk_all"):
+            with st.container():
+                st.warning(f"⚠️ Удалить {len(st.session_state.bulk_delete_ids_all)} заявок?")
+                col_yes, col_no = st.columns(2)
+                with col_yes:
+                    if st.button("✅ Да", use_container_width=True, key="confirm_bulk_all"):
+                        success_count = 0
+                        for id in st.session_state.bulk_delete_ids_all:
+                            success, _ = delete_request(id)
+                            if success:
+                                success_count += 1
+                        if success_count > 0:
+                            st.success(f"✅ Удалено заявок: {success_count}")
                             st.session_state.show_bulk_delete_confirm_all = False
                             st.session_state.bulk_delete_ids_all = []
+                            # Сбрасываем выделение
+                            for idx in range(len(edit_df)):
+                                st.session_state[f"{editor_key}_{idx}_Выбрать"] = False
+                            time.sleep(1)
                             st.rerun()
-    else:
-            st.info("ℹ️ Отметьте заявки в колонке 'Выбрать' для редактирования")
+                        else:
+                            st.error("❌ Ошибка при удалении")
+                with col_no:
+                    if st.button("❌ Нет", use_container_width=True, key="cancel_bulk_all"):
+                        st.session_state.show_bulk_delete_confirm_all = False
+                        st.session_state.bulk_delete_ids_all = []
+                        st.rerun()
+        
+        # Экспорт в Excel
+        st.markdown("---")
+        st.subheader("📥 Экспорт данных")
         
         excel_data = to_excel(filtered_df)
         st.download_button(
