@@ -386,7 +386,7 @@ def to_excel(df, comments_dict=None):
     columns_to_keep = []
     for col in df_with_comments.columns:
         # Пропускаем служебные колонки
-        if col.lower() not in ['is_anonymous', 'author_username', 'author']:
+        if col.lower() not in ['is_anonymous']:
             columns_to_keep.append(col)
     
     # Если есть колонка ID, оставляем её
