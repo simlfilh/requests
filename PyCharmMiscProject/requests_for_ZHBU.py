@@ -507,23 +507,20 @@ def show_comments_for_request(request_id, user_role, username):
     
     st.markdown("### ✏️ Добавить комментарий")
     
-    # Используем форму для добавления комментария
+    # Используем form с submit - как в show_all_requests_with_control
     with st.form(key=f"add_comment_form_{request_id}"):
         comment_text = st.text_area("Текст комментария", placeholder="Введите ваш комментарий...", key=f"comment_text_{request_id}")
-        col1, col2, col3 = st.columns([3, 1, 1])
-        with col2:
-            submitted = st.form_submit_button("💬 Отправить", use_container_width=True)
+        submitted = st.form_submit_button("💬 Отправить")
         
         if submitted:
             if comment_text and comment_text.strip():
-                # Используем новую функцию с привязкой к пользователю
                 success, msg = add_comment_with_user(request_id, comment_text, username)
                 if success:
                     st.success("✅ Комментарий добавлен")
-                    # Убираем st.rerun() - данные обновятся при следующем обращении
-                    # Вместо этого показываем сообщение и очищаем форму
-                    st.session_state[f"comment_text_{request_id}"] = ""  # Очищаем поле
-                    st.rerun()  # Оставляем только один rerun в конце
+                    # Очищаем поле ввода через session_state
+                    if f"comment_text_{request_id}" in st.session_state:
+                        st.session_state[f"comment_text_{request_id}"] = ""
+                    st.rerun()
                 else:
                     st.error(f"❌ {msg}")
             else:
@@ -617,7 +614,7 @@ def show_dormitory_requests_with_control(dormitory, user_role, user_name, userna
         
         st.caption(f"Количество заявок: {len(cat_df)}")
         
-        # Используем новую функцию для комментариев с именами пользователей
+        # Добавляем колонку с комментариями для отображения в data_editor
         comments_dict = {}
         for _, row in cat_df.iterrows():
             request_id = row['ID']
@@ -686,6 +683,7 @@ def show_dormitory_requests_with_control(dormitory, user_role, user_name, userna
         for i in range(len(edited_df)):
             st.session_state[checkbox_key][i] = edited_df.loc[i, "Выбрать"]
         
+        # Обновление комментариев через data_editor
         comments_changed = False
         for i in range(len(edited_df)):
             request_id = int(edit_df.loc[i, "ID"])
@@ -700,7 +698,6 @@ def show_dormitory_requests_with_control(dormitory, user_role, user_name, userna
                     lines = [line.strip() for line in new_comments.split('\n') if line.strip()]
                     
                     for line in lines:
-                        # Используем новую функцию с привязкой к пользователю
                         success, msg = add_comment_with_user(request_id, line, username)
                         if success:
                             comments_changed = True
@@ -798,7 +795,7 @@ def show_dormitory_requests_with_control(dormitory, user_role, user_name, userna
                         st.session_state[confirm_key] = False
                         st.session_state[f"bulk_delete_ids_{dormitory}_{category}"] = []
                         st.rerun()
-
+                        
 def show_login_form():
     """Отображает форму входа"""
     st.title("🔐 Панель сотрудника ЖБУ | Управление электронными заявками")
