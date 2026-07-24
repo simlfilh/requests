@@ -91,6 +91,111 @@ DORMITORIES = [
 def get_supabase():
     return create_client(SUPABASE_URL, SUPABASE_KEY)
 
+# ============ НОВЫЕ ФУНКЦИИ ДЛЯ РАБОТЫ С ПОЛЬЗОВАТЕЛЯМИ ============
+
+def get_user_by_username(username):
+    """Получает пользователя из БД по username"""
+    try:
+        supabase = get_supabase()
+        result = supabase.table('users').select('*').eq('username', username).execute()
+        if result.data:
+            return result.data[0]
+        return None
+    except Exception as e:
+        return None
+
+def initialize_users_in_db():
+    """Загружает пользователей из конфига в базу данных"""
+    try:
+        supabase = get_supabase()
+        
+        for username, user_data in USERS.items():
+            # Проверяем, существует ли пользователь
+            existing = supabase.table('users').select('*').eq('username', username).execute()
+            
+            if not existing.data:
+                # Добавляем нового пользователя
+                supabase.table('users').insert({
+                    "username": username,
+                    "password_hash": user_data["password"],
+                    "role": user_data["role"],
+                    "name": user_data["name"],
+                    "dormitory": user_data.get("dormitory")
+                }).execute()
+    except Exception as e:
+        pass  # Игнорируем ошибки при инициализации
+
+def get_user_name_by_username(username):
+    """Получает полное имя пользователя по username"""
+    if not username:
+        return "Система"
+    
+    # Сначала проверяем в локальном словаре (быстрее)
+    if username in USERS:
+        return USERS[username]["name"]
+    
+    # Если не нашли, проверяем в БД
+    user = get_user_by_username(username)
+    if user:
+        return user.get("name", username)
+    
+    return username
+
+# ============ МОДИФИЦИРОВАННЫЕ ФУНКЦИИ ДЛЯ КОММЕНТАРИЕВ ============
+
+def load_comments_with_users(request_id):
+    """Загружает комментарии с именами пользователей"""
+    supabase = get_supabase()
+    request_id = int(request_id)
+    response = supabase.table('comments').select('*').eq('request_id', request_id).order('created_at', desc=False).execute()
+    
+    if not response.data:
+        return pd.DataFrame()
+    
+    # Добавляем имена пользователей
+    comments_list = []
+    for comment in response.data:
+        comment_dict = dict(comment)
+        username = comment_dict.get('author_username')
+        
+        # Получаем имя пользователя
+        if username:
+            user_name = get_user_name_by_username(username)
+            comment_dict['author_display'] = user_name
+        else:
+            # Если нет author_username, используем старое поле author
+            comment_dict['author_display'] = comment_dict.get('author', 'Система')
+        
+        comments_list.append(comment_dict)
+    
+    return pd.DataFrame(comments_list)
+
+def add_comment_with_user(request_id, comment_text, username):
+    """Добавляет комментарий с привязкой к пользователю"""
+    if not comment_text or comment_text.strip() == "":
+        return False, "Комментарий не может быть пустым"
+    
+    supabase = get_supabase()
+    try:
+        request_id = int(request_id)
+        
+        # Получаем имя пользователя для поля author (для обратной совместимости)
+        author_name = get_user_name_by_username(username)
+        
+        data = {
+            'request_id': request_id,
+            'comment': comment_text.strip(),
+            'author': author_name,  # Оставляем для обратной совместимости
+            'author_username': username,  # Новое поле для связи с пользователем
+            'created_at': datetime.now().isoformat()
+        }
+        response = supabase.table('comments').insert(data).execute()
+        return True, "Комментарий добавлен"
+    except Exception as e:
+        return False, f"Ошибка при добавлении комментария: {str(e)}"
+
+# ============ ОСТАЛЬНЫЕ ФУНКЦИИ (без изменений) ============
+
 def authenticate_user(username, password):
     """Проверяет учетные данные пользователя"""
     if username in USERS:
@@ -116,6 +221,7 @@ def load_requests_by_dormitory(dormitory):
         return pd.DataFrame()
 
 def load_comments(request_id):
+    """Старая функция для обратной совместимости"""
     supabase = get_supabase()
     request_id = int(request_id)
     response = supabase.table('comments').select('*').eq('request_id', request_id).order('created_at', desc=False).execute()
@@ -125,6 +231,7 @@ def load_comments(request_id):
         return pd.DataFrame()
 
 def add_comment(request_id, comment_text, author="Заведующий"):
+    """Старая функция для обратной совместимости"""
     if not comment_text or comment_text.strip() == "":
         return False, "Комментарий не может быть пустым"
     
@@ -346,13 +453,15 @@ def show_statistics(user_role, user_dormitory):
     else:
         st.info("Нет доступных общежитий для отображения статистики")
 
-def show_comments_for_request(request_id, user_role):
+def show_comments_for_request(request_id, user_role, username):
+    """Обновленная функция для отображения комментариев с именами пользователей"""
     request_id = int(request_id)
     
     st.markdown("---")
     st.subheader("💬 Комментарии к заявке")
     
-    comments_df = load_comments(request_id)
+    # Используем новую функцию с именами пользователей
+    comments_df = load_comments_with_users(request_id)
     
     if not comments_df.empty:
         for _, comment in comments_df.iterrows():
@@ -366,9 +475,12 @@ def show_comments_for_request(request_id, user_role):
                     except:
                         pass
                 
+                # Используем author_display вместо author
+                author_display = comment.get('author_display', comment.get('author', 'Система'))
+                
                 st.markdown(f"""
                 <div style="background-color: #f0f2f6; padding: 10px; border-radius: 10px; margin-bottom: 10px;">
-                    <strong>👤 {comment['author']}</strong>
+                    <strong>👤 {author_display}</strong>
                     <span style="color: #666; font-size: 12px; margin-left: 10px;">{created_at}</span>
                     <br>
                     <span>{comment['comment']}</span>
@@ -396,8 +508,8 @@ def show_comments_for_request(request_id, user_role):
         
         if submitted:
             if comment_text and comment_text.strip():
-                author = "Заведующий" if user_role == "head" else "Сотрудник ЖБУ"
-                success, msg = add_comment(request_id, comment_text, author=author)
+                # Используем новую функцию с привязкой к пользователю
+                success, msg = add_comment_with_user(request_id, comment_text, username)
                 if success:
                     st.success("✅ Комментарий добавлен")
                     time.sleep(0.5)
@@ -407,7 +519,8 @@ def show_comments_for_request(request_id, user_role):
             else:
                 st.warning("⚠️ Введите текст комментария")
 
-def show_dormitory_requests_with_control(dormitory, user_role, user_name):
+def show_dormitory_requests_with_control(dormitory, user_role, user_name, username):
+    """Обновленная функция с передачей username"""
     df = load_requests_by_dormitory(dormitory)
     
     if df.empty:
@@ -494,15 +607,17 @@ def show_dormitory_requests_with_control(dormitory, user_role, user_name):
         
         st.caption(f"Количество заявок: {len(cat_df)}")
         
+        # Используем новую функцию для комментариев с именами пользователей
         comments_dict = {}
         for _, row in cat_df.iterrows():
             request_id = row['ID']
-            comments_df = load_comments(request_id)
+            comments_df = load_comments_with_users(request_id)
             if not comments_df.empty:
                 comments_list = []
                 for _, comment in comments_df.iterrows():
+                    author_display = comment.get('author_display', comment.get('author', 'Система'))
                     text = comment.get('comment', '')
-                    comments_list.append(text)
+                    comments_list.append(f"{author_display}: {text}")
                 comments_dict[request_id] = "\n".join(comments_list)
             else:
                 comments_dict[request_id] = ""
@@ -575,8 +690,8 @@ def show_dormitory_requests_with_control(dormitory, user_role, user_name):
                     lines = [line.strip() for line in new_comments.split('\n') if line.strip()]
                     
                     for line in lines:
-                        author = "Заведующий" if user_role == "head" else "Сотрудник ЖБУ"
-                        success, msg = add_comment(request_id, line, author=author)
+                        # Используем новую функцию с привязкой к пользователю
+                        success, msg = add_comment_with_user(request_id, line, username)
                         if success:
                             comments_changed = True
                 else:
@@ -693,6 +808,7 @@ def show_login_form():
                     if user:
                         st.session_state.authenticated = True
                         st.session_state.user = user
+                        st.session_state.username = username  # Сохраняем username
                         st.rerun()
                     else:
                         st.error("❌ Неверный логин или пароль!")
@@ -715,6 +831,12 @@ def main():
     if "refresh_count" not in st.session_state:
         st.session_state.refresh_count = 0
 
+    # Инициализация пользователей в БД (при первом запуске)
+    try:
+        initialize_users_in_db()
+    except Exception as e:
+        pass  # Игнорируем ошибки при инициализации
+
     # Если не авторизован - показываем форму входа
     if not st.session_state.authenticated:
         show_login_form()
@@ -725,6 +847,7 @@ def main():
     user_role = user["role"]
     user_name = user["name"]
     user_dormitory = user.get("dormitory")
+    username = st.session_state.get("username", "")  # Получаем username
     
     # Показываем приветствие и кнопку выхода
     col1, col2, col3 = st.columns([4, 1, 1])
@@ -739,6 +862,7 @@ def main():
         if st.button("🚪 Выйти", use_container_width=True):
             st.session_state.authenticated = False
             st.session_state.user = None
+            st.session_state.username = None
             st.rerun()
     
     st.divider()
@@ -746,7 +870,7 @@ def main():
     # Навигация в зависимости от роли
     if user_role == "head":
         # Заведующий видит только свое общежитие
-        show_dormitory_requests_with_control(user_dormitory, user_role, user_name)
+        show_dormitory_requests_with_control(user_dormitory, user_role, user_name, username)
         
         # Кнопка для статистики
         col_full2 = st.columns(1)[0]
@@ -797,7 +921,7 @@ def main():
             st.divider()
         
         elif st.session_state.show_all_requests:
-            show_all_requests_with_control()
+            show_all_requests_with_control(username)
         
         else:
             if st.session_state.selected_dormitory == "Все":
@@ -829,10 +953,10 @@ def main():
                 
             else:
                 st.subheader(st.session_state.selected_dormitory)
-                show_dormitory_requests_with_control(st.session_state.selected_dormitory, user_role, user_name)
+                show_dormitory_requests_with_control(st.session_state.selected_dormitory, user_role, user_name, username)
 
-def show_all_requests_with_control():
-    """Функция для отображения всех заявок с управлением (только для сотрудника ЖБУ)"""
+def show_all_requests_with_control(username):
+    """Обновленная функция для отображения всех заявок с привязкой к пользователю"""
     st.header("📋 Все заявки")
     
     df_all = load_requests()
@@ -907,14 +1031,15 @@ def show_all_requests_with_control():
     
     filtered_df["Дата"] = pd.to_datetime(filtered_df["Дата"]).dt.strftime("%d.%m.%Y")
     
+    # Используем новую функцию для комментариев с именами пользователей
     comments_dict = {}
     for _, row in filtered_df.iterrows():
         request_id = row['ID']
-        comments_df = load_comments(request_id)
+        comments_df = load_comments_with_users(request_id)
         if not comments_df.empty:
             comments_list = []
             for _, comment in comments_df.iterrows():
-                author = comment.get('author', '')
+                author_display = comment.get('author_display', comment.get('author', 'Система'))
                 text = comment.get('comment', '')
                 created_at = comment.get('created_at', '')
                 if isinstance(created_at, str):
@@ -923,7 +1048,7 @@ def show_all_requests_with_control():
                         created_at = dt.strftime('%d.%m.%Y %H:%M')
                     except:
                         created_at = ''
-                comments_list.append(f"[{created_at}] {author}: {text}")
+                comments_list.append(f"[{created_at}] {author_display}: {text}")
             comments_dict[request_id] = "\n".join(comments_list)
         else:
             comments_dict[request_id] = ""
@@ -1011,7 +1136,8 @@ def show_all_requests_with_control():
                 
                 for line in new_lines:
                     if line not in existing_texts and line:
-                        success, msg = add_comment(request_id, line, author="Сотрудник ЖБУ")
+                        # Используем новую функцию с привязкой к пользователю
+                        success, msg = add_comment_with_user(request_id, line, username)
                         if success:
                             comments_added = True
                             existing_texts.add(line)
