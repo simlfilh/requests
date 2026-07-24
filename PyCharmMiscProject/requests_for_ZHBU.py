@@ -9,6 +9,7 @@ from email.mime.multipart import MIMEMultipart
 import time
 import locale
 import os
+import hashlib
 
 try:
     if os.name == 'nt':  # Windows
@@ -25,11 +26,59 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+# Получаем секреты
 SUPABASE_URL = st.secrets["SUPABASE_URL"]
 SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
 SMTP_EMAIL = st.secrets["SMTP_EMAIL"]
 SMTP_PASSWORD = st.secrets["SMTP_PASSWORD"]
-PASSWORD = st.secrets["PASSWORD"] 
+
+# Система пользователей с паролями из secrets
+USERS = {
+    # Заведующие (5 человек)
+    "head_1": {
+        "username": "head_1",
+        "password": hashlib.sha256(st.secrets["PASSWORD_HEAD_1"].encode()).hexdigest(),
+        "role": "head",
+        "name": "Заведующий №1",
+        "dormitory": "Общежитие №2 | Чкаловский пр-т, д. 27"
+    },
+    "head_2": {
+        "username": "head_2",
+        "password": hashlib.sha256(st.secrets["PASSWORD_HEAD_2"].encode()).hexdigest(),
+        "role": "head",
+        "name": "Заведующий №2",
+        "dormitory": "Общежитие №3 | пр-т Косыгина, д. 19, к. 2"
+    },
+    "head_3": {
+        "username": "head_3",
+        "password": hashlib.sha256(st.secrets["PASSWORD_HEAD_3"].encode()).hexdigest(),
+        "role": "head",
+        "name": "Заведующий №3",
+        "dormitory": "Общежитие №4 | ул. Воронежская, д. 69"
+    },
+    "head_4": {
+        "username": "head_4",
+        "password": hashlib.sha256(st.secrets["PASSWORD_HEAD_4"].encode()).hexdigest(),
+        "role": "head",
+        "name": "Заведующий №4",
+        "dormitory": "Общежитие №7 | ул. Воронежская, д. 38"
+    },
+    "head_5": {
+        "username": "head_5",
+        "password": hashlib.sha256(st.secrets["PASSWORD_HEAD_5"].encode()).hexdigest(),
+        "role": "head",
+        "name": "Заведующий №5",
+        "dormitory": "Общежитие №2 | Чкаловский пр-т, д. 27"
+    },
+    # Сотрудник ЖБУ (1 человек)
+    "jbu_worker": {
+        "username": "jbu_worker",
+        "password": hashlib.sha256(st.secrets["PASSWORD_JBU_WORKER"].encode()).hexdigest(),
+        "role": "jbu",
+        "name": "Сотрудник ЖБУ",
+        "dormitory": None  # Видит все общежития
+    }
+}
 
 DORMITORIES = [
     "Общежитие №2 | Чкаловский пр-т, д. 27",
@@ -41,6 +90,14 @@ DORMITORIES = [
 def get_supabase():
     return create_client(SUPABASE_URL, SUPABASE_KEY)
 
+def authenticate_user(username, password):
+    """Проверяет учетные данные пользователя"""
+    if username in USERS:
+        hashed_password = hashlib.sha256(password.encode()).hexdigest()
+        if USERS[username]["password"] == hashed_password:
+            return USERS[username]
+    return None
+
 def load_requests():
     supabase = get_supabase()
     response = supabase.table('requests').select('*').order('id', desc=False).execute()
@@ -48,10 +105,6 @@ def load_requests():
         return pd.DataFrame(response.data)
     else:
         return pd.DataFrame()
-
-@st.cache_data(ttl=5)
-def load_requests_cached():
-    return load_requests()
 
 def load_requests_by_dormitory(dormitory):
     supabase = get_supabase()
@@ -61,13 +114,7 @@ def load_requests_by_dormitory(dormitory):
     else:
         return pd.DataFrame()
 
-@st.cache_data(ttl=5)
-def load_requests_by_dormitory_cached(dormitory):
-    return load_requests_by_dormitory(dormitory)
-
-# НОВАЯ ФУНКЦИЯ: Загрузка комментариев для заявки
 def load_comments(request_id):
-    """Загружает все комментарии для конкретной заявки"""
     supabase = get_supabase()
     request_id = int(request_id)
     response = supabase.table('comments').select('*').eq('request_id', request_id).order('created_at', desc=False).execute()
@@ -77,15 +124,12 @@ def load_comments(request_id):
         return pd.DataFrame()
 
 def add_comment(request_id, comment_text, author="Заведующий"):
-    """Добавляет комментарий к заявке"""
     if not comment_text or comment_text.strip() == "":
         return False, "Комментарий не может быть пустым"
     
     supabase = get_supabase()
     try:
-        # Преобразуем request_id в обычный int (если это numpy.int64)
         request_id = int(request_id)
-        
         data = {
             'request_id': request_id,
             'comment': comment_text.strip(),
@@ -97,9 +141,7 @@ def add_comment(request_id, comment_text, author="Заведующий"):
     except Exception as e:
         return False, f"Ошибка при добавлении комментария: {str(e)}"
         
-# НОВАЯ ФУНКЦИЯ: Удаление комментария
 def delete_comment(comment_id):
-    """Удаляет комментарий по ID"""
     supabase = get_supabase()
     try:
         supabase.table('comments').delete().eq('id', comment_id).execute()
@@ -113,7 +155,6 @@ def delete_request(request_id):
         response = supabase.table('requests').select('*').eq('id', request_id).execute()
         if response.data:
             request_data = response.data[0]
-            # Удаляем также все комментарии к заявке
             supabase.table('comments').delete().eq('request_id', request_id).execute()
             supabase.table('requests').delete().eq('id', request_id).execute()
             send_deletion_notification_to_workers(request_data)
@@ -271,12 +312,16 @@ def to_excel(df):
         
     return output.getvalue()
     
-def show_statistics():
+def show_statistics(user_role, user_dormitory):
     st.header("📊 Статистика по общежитиям")
     
     stats_data = []
     for dorm in DORMITORIES:
-        dorm_df = load_requests_by_dormitory_cached(dorm)
+        # Если пользователь - заведующий, показываем только его общежитие
+        if user_role == "head" and user_dormitory and dorm != user_dormitory:
+            continue
+            
+        dorm_df = load_requests_by_dormitory(dorm)
         if not dorm_df.empty:
             stats_data.append({
                 "Общежитие": dorm.split('|')[0].strip(),
@@ -294,26 +339,24 @@ def show_statistics():
                 "Выполнено": 0
             })
     
-    stats_df = pd.DataFrame(stats_data)
-    st.dataframe(stats_df, use_container_width=True, hide_index=True)
+    if stats_data:
+        stats_df = pd.DataFrame(stats_data)
+        st.dataframe(stats_df, use_container_width=True, hide_index=True)
+    else:
+        st.info("Нет доступных общежитий для отображения статистики")
 
-# НОВАЯ ФУНКЦИЯ: Отображение комментариев к заявке
-def show_comments_for_request(request_id):
-    """Отображает комментарии для конкретной заявки и позволяет добавлять новые"""
+def show_comments_for_request(request_id, user_role):
     request_id = int(request_id)
     
     st.markdown("---")
     st.subheader("💬 Комментарии к заявке")
     
-    # Загружаем комментарии
     comments_df = load_comments(request_id)
     
-    # Показываем существующие комментарии
     if not comments_df.empty:
         for _, comment in comments_df.iterrows():
             col1, col2 = st.columns([10, 1])
             with col1:
-                # Форматируем время
                 created_at = comment['created_at']
                 if isinstance(created_at, str):
                     try:
@@ -332,7 +375,6 @@ def show_comments_for_request(request_id):
                 """, unsafe_allow_html=True)
             
             with col2:
-                # Кнопка удаления комментария (только для заведующих)
                 if st.button("🗑️", key=f"del_comment_{comment['id']}", help="Удалить комментарий"):
                     success, msg = delete_comment(comment['id'])
                     if success:
@@ -343,7 +385,6 @@ def show_comments_for_request(request_id):
     else:
         st.info("Комментариев пока нет")
     
-    # Форма для добавления нового комментария
     st.markdown("### ✏️ Добавить комментарий")
     
     with st.form(key=f"add_comment_form_{request_id}"):
@@ -354,7 +395,8 @@ def show_comments_for_request(request_id):
         
         if submitted:
             if comment_text and comment_text.strip():
-                success, msg = add_comment(request_id, comment_text, author="Заведующий")
+                author = "Заведующий" if user_role == "head" else "Сотрудник ЖБУ"
+                success, msg = add_comment(request_id, comment_text, author=author)
                 if success:
                     st.success("✅ Комментарий добавлен")
                     time.sleep(0.5)
@@ -364,14 +406,13 @@ def show_comments_for_request(request_id):
             else:
                 st.warning("⚠️ Введите текст комментария")
 
-def show_dormitory_requests_with_control(dormitory):
+def show_dormitory_requests_with_control(dormitory, user_role, user_name):
     df = load_requests_by_dormitory(dormitory)
     
     if df.empty:
         st.info(f"Нет заявок для {dormitory}")
         return
     
-    # ---------- Общие фильтры ----------
     st.subheader("🔍 Фильтры")
     col1, col2 = st.columns(2)
     with col1:
@@ -419,7 +460,6 @@ def show_dormitory_requests_with_control(dormitory):
         "status": "Статус"
     })
     
-    # ---------- Метрики ----------
     col1, col2, col3, col4 = st.columns(4)
     with col1:
         st.metric("Всего", len(display_df))
@@ -432,7 +472,6 @@ def show_dormitory_requests_with_control(dormitory):
     
     st.markdown("---")
     
-    # ---------- ТОЧНЫЕ названия из базы данных (со смайликами) ----------
     types_to_show = [
         "🔧 Сантехника",
         "⚡ Электрика",
@@ -442,11 +481,9 @@ def show_dormitory_requests_with_control(dormitory):
         "❓ Вопрос / Другое"
     ]
     
-    # Для каждого типа создаём отдельную таблицу
     for category in types_to_show:
         st.subheader(category)
         
-        # Фильтруем данные по типу
         cat_df = display_df[display_df["Тип заявки"] == category]
         
         if cat_df.empty:
@@ -456,7 +493,6 @@ def show_dormitory_requests_with_control(dormitory):
         
         st.caption(f"Количество заявок: {len(cat_df)}")
         
-        # ---------- ЗАГРУЖАЕМ КОММЕНТАРИИ ----------
         comments_dict = {}
         for _, row in cat_df.iterrows():
             request_id = row['ID']
@@ -466,7 +502,6 @@ def show_dormitory_requests_with_control(dormitory):
                 for _, comment in comments_df.iterrows():
                     text = comment.get('comment', '')
                     comments_list.append(text)
-                # Объединяем все комментарии в один текст с переносами строк
                 comments_dict[request_id] = "\n".join(comments_list)
             else:
                 comments_dict[request_id] = ""
@@ -474,32 +509,26 @@ def show_dormitory_requests_with_control(dormitory):
         cat_df_with_comments = cat_df.copy()
         cat_df_with_comments["Комментарии"] = cat_df_with_comments["ID"].map(comments_dict)
         
-        # ---------- РАБОТА С ЧЕКБОКСАМИ ----------
         checkbox_key = f"checkboxes_{dormitory}_{category}"
         
         if checkbox_key not in st.session_state:
             st.session_state[checkbox_key] = {i: False for i in range(len(cat_df_with_comments))}
         
-        # Создаем копию для редактирования
         edit_df = cat_df_with_comments.copy()
         edit_df = edit_df.reset_index(drop=True)
         
-        # Добавляем колонку с чекбоксами
         checkbox_values = []
         for i in range(len(edit_df)):
             checkbox_values.append(st.session_state[checkbox_key].get(i, False))
         
         edit_df.insert(0, "Выбрать", checkbox_values)
         
-        # Выбираем только нужные колонки для отображения
         columns_to_show = ["Выбрать", "ID", "Дата", "ФИО студента", "Общежитие", "Комната", "Тип заявки", "Описание", "Статус", "Комментарии"]
         display_columns = [col for col in columns_to_show if col in edit_df.columns]
         edit_df_display = edit_df[display_columns]
         
-        # Уникальный ключ для data_editor
         editor_key = f"data_editor_{dormitory}_{category}"
         
-        # Настройка колонок для data_editor
         column_config = {
             "Выбрать": st.column_config.CheckboxColumn(
                 "Выбрать",
@@ -519,7 +548,6 @@ def show_dormitory_requests_with_control(dormitory):
             ),
         }
         
-        # Отображаем редактируемую таблицу
         edited_df = st.data_editor(
             edit_df_display,
             use_container_width=True,
@@ -529,52 +557,42 @@ def show_dormitory_requests_with_control(dormitory):
             key=editor_key
         )
         
-        # Обновляем состояние чекбоксов из отредактированной таблицы
         for i in range(len(edited_df)):
             st.session_state[checkbox_key][i] = edited_df.loc[i, "Выбрать"]
         
-        # ---------- НОВАЯ ЛОГИКА ОБРАБОТКИ КОММЕНТАРИЕВ ----------
         comments_changed = False
         for i in range(len(edited_df)):
             request_id = int(edit_df.loc[i, "ID"])
             old_comments = edit_df.loc[i, "Комментарии"] if i < len(edit_df) else ""
             new_comments = edited_df.loc[i, "Комментарии"] if i < len(edited_df) else ""
             
-            # Если комментарии изменились
             if new_comments != old_comments:
-                # Удаляем все старые комментарии для этой заявки
                 supabase = get_supabase()
                 supabase.table('comments').delete().eq('request_id', request_id).execute()
                 
-                # Если есть новые комментарии, добавляем их
                 if new_comments and new_comments.strip():
-                    # Разбиваем на строки и фильтруем пустые
                     lines = [line.strip() for line in new_comments.split('\n') if line.strip()]
                     
-                    # Добавляем каждый комментарий
                     for line in lines:
-                        success, msg = add_comment(request_id, line, author="Заведующий")
+                        author = "Заведующий" if user_role == "head" else "Сотрудник ЖБУ"
+                        success, msg = add_comment(request_id, line, author=author)
                         if success:
                             comments_changed = True
                 else:
                     comments_changed = True
         
-        # Если были изменения, обновляем страницу
         if comments_changed:
             st.success("✅ Комментарии обновлены")
             time.sleep(0.5)
             st.rerun()
         
-        # Получаем выбранные ID
         selected_ids = []
         for i in range(len(edited_df)):
             if edited_df.loc[i, "Выбрать"]:
                 selected_ids.append(edit_df.loc[i, "ID"])
         
-        # ---------- УПРАВЛЕНИЕ: ДВА СТОЛБЦА ----------
         col_left, col_right = st.columns(2)
         
-        # ЛЕВЫЙ СТОЛБЕЦ: Выбрать все, Снять все, Удалить
         with col_left:
             if st.button("✅ Выбрать все", use_container_width=True, key=f"select_all_{dormitory}_{category}"):
                 for i in range(len(edit_df)):
@@ -622,7 +640,6 @@ def show_dormitory_requests_with_control(dormitory):
                 key=f"export_{dormitory}_{category}"
             )
         
-        # Диалог подтверждения массового удаления
         confirm_key = f"show_bulk_delete_confirm_{dormitory}_{category}"
         if st.session_state.get(confirm_key, False):
             with st.container():
@@ -655,7 +672,32 @@ def show_dormitory_requests_with_control(dormitory):
                         st.session_state[confirm_key] = False
                         st.session_state[f"bulk_delete_ids_{dormitory}_{category}"] = []
                         st.rerun()
+
+def show_login_form():
+    """Отображает форму входа"""
+    st.title("🔐 Панель сотрудника ЖБУ | Управление электронными заявками")
+    
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        st.markdown("### 👤 Вход в систему")
         
+        with st.form("login_form"):
+            username = st.text_input("Логин", placeholder="Введите ваш логин")
+            password = st.text_input("Пароль", type="password", placeholder="Введите пароль")
+            submitted = st.form_submit_button("🔑 Войти", use_container_width=True)
+            
+            if submitted:
+                if username and password:
+                    user = authenticate_user(username, password)
+                    if user:
+                        st.session_state.authenticated = True
+                        st.session_state.user = user
+                        st.rerun()
+                    else:
+                        st.error("❌ Неверный логин или пароль!")
+                else:
+                    st.warning("⚠️ Пожалуйста, заполните все поля")
+
 def main():
     if "authenticated" not in st.session_state:
         st.session_state.authenticated = False
@@ -672,113 +714,128 @@ def main():
     if "refresh_count" not in st.session_state:
         st.session_state.refresh_count = 0
 
-    
-    st.title("🔐 Панель сотрудника ЖБУ | Управление электронными заявками")
-    
+    # Если не авторизован - показываем форму входа
     if not st.session_state.authenticated:
-        with st.form("login_form"):
-            password_input = st.text_input("Введите пароль для доступа", type="password")
-            submitted = st.form_submit_button("Войти")
-            if submitted:
-                if password_input == PASSWORD:
-                    st.session_state.authenticated = True
-                    st.rerun()
-                else:
-                    st.error("❌ Неверный пароль!")
+        show_login_form()
         return
     
-    col1, col2 = st.columns([6, 1])
+    # Получаем данные пользователя
+    user = st.session_state.user
+    user_role = user["role"]
+    user_name = user["name"]
+    user_dormitory = user.get("dormitory")
     
-    with col2:
+    # Показываем приветствие и кнопку выхода
+    col1, col2, col3 = st.columns([4, 1, 1])
+    with col1:
+        st.title(f"👋 Здравствуйте, {user_name}!")
+        if user_role == "head":
+            st.caption(f"🏢 Ваше общежитие: {user_dormitory.split('|')[0].strip()}")
+        else:
+            st.caption("🔧 Доступны все общежития")
+    
+    with col3:
         if st.button("🚪 Выйти", use_container_width=True):
             st.session_state.authenticated = False
+            st.session_state.user = None
             st.rerun()
-
     
-    cols = st.columns(4)
-    dormitories_short = ["№2", "№3", "№4", "№7"]
-    dormitories_full = [
-        "Общежитие №2 | Чкаловский пр-т, д. 27",
-        "Общежитие №3 | пр-т Косыгина, д. 19, к. 2",
-        "Общежитие №4 | ул. Воронежская, д. 69",
-        "Общежитие №7 | ул. Воронежская, д. 38"
-    ]
-        
-    for i, (short, full) in enumerate(zip(dormitories_short, dormitories_full)):
-        with cols[i]:
-            if st.button(f"🏢 {full}", use_container_width=True, key=f"dorm_{i+2}"):
-                st.session_state.selected_dormitory = full
-                st.session_state.show_stats = False
-                st.session_state.show_all_requests = False
-                st.rerun()
-
-    col_full = st.columns(1)[0]
-    with col_full:
-        if st.button("📋 Все заявки", use_container_width=True, key="dorm_all"):
-            st.session_state.show_all_requests = not st.session_state.show_all_requests
-            st.session_state.show_stats = False
-            st.rerun()
-
-    col_full2 = st.columns(1)[0]
-    with col_full2:
-        if st.button("📊 Статистика", use_container_width=True, key="show_stats_btn"):
-            st.session_state.show_stats = not st.session_state.show_stats
-            st.session_state.show_all_requests = False
-            st.rerun()
-                    
     st.divider()
     
-    if st.session_state.show_stats:
-        show_statistics()
-        st.divider()
-    
-    elif st.session_state.show_all_requests:
-        show_all_requests_with_control()
-    
-    else:
-        st.header("📋 Электронные заявки студентов")
+    # Навигация в зависимости от роли
+    if user_role == "head":
+        # Заведующий видит только свое общежитие
+        st.subheader("📋 Ваше общежитие")
+        show_dormitory_requests_with_control(user_dormitory, user_role, user_name)
         
-        if st.session_state.selected_dormitory == "Все":
-            st.info("🏠 Выберите общежитие для просмотра заявок или нажмите 'Все заявки'")
-            
-            st.subheader("📊 Краткая статистика")
-            stats_data = []
-            for dorm in DORMITORIES:
-                dorm_df = load_requests_by_dormitory(dorm)
-                if not dorm_df.empty:
-                    stats_data.append({
-                        "Общежитие": dorm.split('|')[0].strip(),
-                        "Всего": len(dorm_df),
-                        "Новых": len(dorm_df[dorm_df["status"] == "Новая"]),
-                        "В работе": len(dorm_df[dorm_df["status"] == "В работе"]),
-                        "Выполнено": len(dorm_df[dorm_df["status"] == "Выполнена"])
-                    })
-                else:
-                    stats_data.append({
-                        "Общежитие": dorm.split('|')[0].strip(),
-                        "Всего": 0,
-                        "Новых": 0,
-                        "В работе": 0,
-                        "Выполнено": 0
-                    })
-            
-            stats_df = pd.DataFrame(stats_data)
-            st.dataframe(stats_df, use_container_width=True, hide_index=True)
-            
+        # Кнопка для статистики
+        col_full2 = st.columns(1)[0]
+        with col_full2:
+            if st.button("📊 Статистика", use_container_width=True):
+                st.session_state.show_stats = not st.session_state.show_stats
+        
+        if st.session_state.show_stats:
+            show_statistics(user_role, user_dormitory)
+    
+    else:  # Сотрудник ЖБУ - полный доступ
+        st.header("📋 Управление заявками")
+        
+        # Кнопки для быстрого перехода по общежитиям
+        cols = st.columns(4)
+        dormitories_short = ["№2", "№3", "№4", "№7"]
+        
+        for i, (short, full) in enumerate(zip(dormitories_short, DORMITORIES)):
+            with cols[i]:
+                if st.button(f"🏢 {full}", use_container_width=True, key=f"dorm_{i+2}"):
+                    st.session_state.selected_dormitory = full
+                    st.session_state.show_stats = False
+                    st.session_state.show_all_requests = False
+                    st.rerun()
+        
+        col_full = st.columns(1)[0]
+        with col_full:
+            if st.button("📋 Все заявки", use_container_width=True, key="dorm_all"):
+                st.session_state.show_all_requests = not st.session_state.show_all_requests
+                st.session_state.show_stats = False
+                st.rerun()
+        
+        col_full2 = st.columns(1)[0]
+        with col_full2:
+            if st.button("📊 Статистика", use_container_width=True, key="show_stats_btn"):
+                st.session_state.show_stats = not st.session_state.show_stats
+                st.session_state.show_all_requests = False
+                st.rerun()
+        
+        st.divider()
+        
+        if st.session_state.show_stats:
+            show_statistics(user_role, None)
+            st.divider()
+        
+        elif st.session_state.show_all_requests:
+            show_all_requests_with_control()
+        
         else:
-            st.subheader(st.session_state.selected_dormitory)
-            show_dormitory_requests_with_control(st.session_state.selected_dormitory)
+            if st.session_state.selected_dormitory == "Все":
+                st.info("🏠 Выберите общежитие для просмотра заявок или нажмите 'Все заявки'")
+                
+                st.subheader("📊 Краткая статистика")
+                stats_data = []
+                for dorm in DORMITORIES:
+                    dorm_df = load_requests_by_dormitory(dorm)
+                    if not dorm_df.empty:
+                        stats_data.append({
+                            "Общежитие": dorm.split('|')[0].strip(),
+                            "Всего": len(dorm_df),
+                            "Новых": len(dorm_df[dorm_df["status"] == "Новая"]),
+                            "В работе": len(dorm_df[dorm_df["status"] == "В работе"]),
+                            "Выполнено": len(dorm_df[dorm_df["status"] == "Выполнена"])
+                        })
+                    else:
+                        stats_data.append({
+                            "Общежитие": dorm.split('|')[0].strip(),
+                            "Всего": 0,
+                            "Новых": 0,
+                            "В работе": 0,
+                            "Выполнено": 0
+                        })
+                
+                stats_df = pd.DataFrame(stats_data)
+                st.dataframe(stats_df, use_container_width=True, hide_index=True)
+                
+            else:
+                st.subheader(st.session_state.selected_dormitory)
+                show_dormitory_requests_with_control(st.session_state.selected_dormitory, user_role, user_name)
 
 def show_all_requests_with_control():
-    """Функция для отображения всех заявок с управлением"""
+    """Функция для отображения всех заявок с управлением (только для сотрудника ЖБУ)"""
     st.header("📋 Все заявки")
     
-    df_all = load_requests_cached()
+    df_all = load_requests()
     if df_all.empty:
         st.info("Пока нет ни одной заявки.")
         return
     
-    # Переименовываем колонки как в старой версии
     display_df_all = df_all.rename(columns={
         "id": "ID",
         "date": "Дата",
@@ -792,7 +849,6 @@ def show_all_requests_with_control():
         "status": "Статус"
     })
     
-    # Добавляем фильтры
     st.subheader("🔍 Фильтры")
     
     request_types = ["Все"] + [
@@ -815,7 +871,6 @@ def show_all_requests_with_control():
         date_options_all = ["Все", "Сегодня", "Вчера", "Выбрать дату", "Выбрать период"]
         date_filter_all = st.selectbox("Период", date_options_all, key="date_all_filter")
     
-    # Применяем фильтры
     filtered_df = display_df_all.copy()
     
     if status_filter_all != "Все":
@@ -829,7 +884,6 @@ def show_all_requests_with_control():
     
     today = datetime.now().date()
     
-    # Фильтр по дате
     if date_filter_all == "Сегодня":
         filtered_df = filtered_df[filtered_df["Дата"] == today.strftime("%Y-%m-%d")]
     elif date_filter_all == "Вчера":
@@ -847,10 +901,8 @@ def show_all_requests_with_control():
         filtered_df["Дата"] = pd.to_datetime(filtered_df["Дата"])
         filtered_df = filtered_df[(filtered_df["Дата"] >= pd.Timestamp(start_date)) & (filtered_df["Дата"] <= pd.Timestamp(end_date))]
     
-    # Преобразуем дату в формат DD.MM.YYYY для отображения
     filtered_df["Дата"] = pd.to_datetime(filtered_df["Дата"]).dt.strftime("%d.%m.%Y")
     
-    # ---------- ЗАГРУЖАЕМ КОММЕНТАРИИ ----------
     comments_dict = {}
     for _, row in filtered_df.iterrows():
         request_id = row['ID']
@@ -872,10 +924,8 @@ def show_all_requests_with_control():
         else:
             comments_dict[request_id] = ""
     
-    # Добавляем колонку с комментариями
     filtered_df["Комментарии"] = filtered_df["ID"].map(comments_dict)
     
-    # Показываем метрики
     col1, col2, col3, col4 = st.columns(4)
     with col1:
         st.metric("Всего", len(filtered_df))
@@ -889,33 +939,25 @@ def show_all_requests_with_control():
     st.markdown("---")
     
     if not filtered_df.empty:
-        # СОЗДАЕМ КЛЮЧ ДЛЯ ХРАНЕНИЯ СОСТОЯНИЯ ЧЕКБОКСОВ
         checkbox_key_all = "checkbox_all_state"
         
-        # Инициализируем состояние чекбоксов, если его нет
         if checkbox_key_all not in st.session_state:
             st.session_state[checkbox_key_all] = {i: False for i in range(len(filtered_df))}
         
-        # Создаем копию DataFrame для отображения с чекбоксами
         edit_df = filtered_df.copy()
         edit_df = edit_df.reset_index(drop=True)
         
-        # Добавляем колонку с чекбоксами
         checkbox_values = []
         for i in range(len(edit_df)):
             checkbox_values.append(st.session_state[checkbox_key_all].get(i, False))
         
         edit_df.insert(0, "Выбрать", checkbox_values)
         
-        # Убираем колонку "Комментарии" из disabled, чтобы можно было редактировать
-        # Оставляем только ID, Дату, Время, ФИО, Email, Общежитие, Комнату, Тип, Описание, Статус - disabled
         columns_for_editor = ["Выбрать", "ID", "Дата", "Время", "ФИО студента", "Email", "Общежитие", "Комната", "Тип заявки", "Описание", "Статус", "Комментарии"]
         edit_df_display = edit_df[columns_for_editor]
         
-        # Уникальный ключ для data_editor
         editor_key = "data_editor_all"
         
-        # Отображаем редактируемую таблицу
         edited_df = st.data_editor(
             edit_df_display,
             use_container_width=True,
@@ -945,44 +987,36 @@ def show_all_requests_with_control():
             key=editor_key
         )
         
-        # Обновляем состояние чекбоксов из отредактированной таблицы
         for i in range(len(edited_df)):
             st.session_state[checkbox_key_all][i] = edited_df.loc[i, "Выбрать"]
         
-        # ---------- ОБРАБОТКА ИЗМЕНЕНИЙ В КОММЕНТАРИЯХ ----------
         comments_added = False
         for i in range(len(edited_df)):
             request_id = int(edit_df.loc[i, "ID"])
             old_comments = edit_df.loc[i, "Комментарии"] if i < len(edit_df) else ""
             new_comments = edited_df.loc[i, "Комментарии"] if i < len(edited_df) else ""
             
-            # Если комментарии изменились
             if new_comments != old_comments and new_comments:
-                # Получаем существующие комментарии из базы
                 existing_comments_df = load_comments(request_id)
                 existing_texts = set()
                 if not existing_comments_df.empty:
                     for _, comm in existing_comments_df.iterrows():
                         existing_texts.add(comm.get('comment', ''))
                 
-                # Разбиваем новые комментарии на строки
                 new_lines = [line.strip() for line in new_comments.split('\n') if line.strip()]
                 
-                # Добавляем только те, которых еще нет
                 for line in new_lines:
                     if line not in existing_texts and line:
-                        success, msg = add_comment(request_id, line, author="Заведующий")
+                        success, msg = add_comment(request_id, line, author="Сотрудник ЖБУ")
                         if success:
                             comments_added = True
                             existing_texts.add(line)
         
-        # Если были добавлены комментарии, обновляем страницу
         if comments_added:
             st.success("✅ Комментарии добавлены")
             time.sleep(0.5)
             st.rerun()
         
-        # Получаем выбранные ID
         selected_ids = []
         for i in range(len(edited_df)):
             if edited_df.loc[i, "Выбрать"]:
@@ -993,24 +1027,20 @@ def show_all_requests_with_control():
         else:
             st.info("ℹ️ Отметьте заявки в колонке 'Выбрать' для редактирования")
         
-        # РАЗДЕЛЯЕМ НА 2 КОЛОНКИ ДЛЯ КНОПОК УПРАВЛЕНИЯ
         col1, col2 = st.columns(2)
         
         with col1:
-            # Кнопка "Выбрать все"
             if st.button("✅ Выбрать все", use_container_width=True, key="select_all_all"):
                 for i in range(len(edit_df)):
                     st.session_state[checkbox_key_all][i] = True
                 st.rerun()
             
-            # Кнопка "Снять все"
             if st.button("❌ Снять все", use_container_width=True, key="deselect_all_all"):
                 for i in range(len(edit_df)):
                     st.session_state[checkbox_key_all][i] = False
                 st.rerun()
         
         with col2:
-            # Выбор статуса (без лейбла)
             new_status_bulk = st.selectbox(
                 "Новый статус",
                 ["Новая", "В работе", "Выполнена"],
@@ -1018,7 +1048,6 @@ def show_all_requests_with_control():
                 label_visibility="collapsed"
             )
             
-            # Кнопка "Изменить статус"
             if st.button(f"🔄 Изменить статус ({len(selected_ids)})", use_container_width=True, key="bulk_update_all"):
                 success_count = 0
                 for id in selected_ids:
@@ -1026,7 +1055,6 @@ def show_all_requests_with_control():
                         success_count += 1
                 if success_count > 0:
                     st.success(f"✅ Статус изменен для {success_count} заявок")
-                    # Сбрасываем выделение
                     for i in range(len(edit_df)):
                         st.session_state[checkbox_key_all][i] = False
                     time.sleep(1)
@@ -1034,7 +1062,6 @@ def show_all_requests_with_control():
                 else:
                     st.error("❌ Ошибка при обновлении статусов")
         
-        # Диалог подтверждения массового удаления
         if st.session_state.get('show_bulk_delete_confirm_all', False):
             with st.container():
                 st.warning(f"⚠️ Удалить {len(st.session_state.bulk_delete_ids_all)} заявок?")
@@ -1050,7 +1077,6 @@ def show_all_requests_with_control():
                             st.success(f"✅ Удалено заявок: {success_count}")
                             st.session_state.show_bulk_delete_confirm_all = False
                             st.session_state.bulk_delete_ids_all = []
-                            # Сбрасываем выделение
                             for i in range(len(edit_df)):
                                 st.session_state[checkbox_key_all][i] = False
                             time.sleep(1)
@@ -1063,7 +1089,6 @@ def show_all_requests_with_control():
                             st.session_state.bulk_delete_ids_all = []
                             st.rerun()
 
-        # Кнопка "Удалить"
         if st.button(f"🗑️ Удалить ({len(selected_ids)})", use_container_width=True, key="bulk_delete_all", type="primary"):
             st.session_state.show_bulk_delete_confirm_all = True
             st.session_state.bulk_delete_ids_all = selected_ids
