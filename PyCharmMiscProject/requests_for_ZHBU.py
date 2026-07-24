@@ -809,7 +809,7 @@ def main():
                     dorm_df = load_requests_by_dormitory(dorm)
                     if not dorm_df.empty:
                         stats_data.append({
-                            "Общежитие": dorm.split('|')[0].strip(),
+                            "Общежитие": dorm,
                             "Всего": len(dorm_df),
                             "Новых": len(dorm_df[dorm_df["status"] == "Новая"]),
                             "В работе": len(dorm_df[dorm_df["status"] == "В работе"]),
@@ -817,7 +817,7 @@ def main():
                         })
                     else:
                         stats_data.append({
-                            "Общежитие": dorm.split('|')[0].strip(),
+                            "Общежитие": dorm,
                             "Всего": 0,
                             "Новых": 0,
                             "В работе": 0,
