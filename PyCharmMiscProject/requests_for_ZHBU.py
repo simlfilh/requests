@@ -69,13 +69,13 @@ def load_requests_by_dormitory_cached(dormitory):
 def load_comments(request_id):
     """Загружает все комментарии для конкретной заявки"""
     supabase = get_supabase()
+    request_id = int(request_id)
     response = supabase.table('comments').select('*').eq('request_id', request_id).order('created_at', desc=False).execute()
     if response.data:
         return pd.DataFrame(response.data)
     else:
         return pd.DataFrame()
 
-# НОВАЯ ФУНКЦИЯ: Добавление комментария
 def add_comment(request_id, comment_text, author="Заведующий"):
     """Добавляет комментарий к заявке"""
     if not comment_text or comment_text.strip() == "":
@@ -83,6 +83,9 @@ def add_comment(request_id, comment_text, author="Заведующий"):
     
     supabase = get_supabase()
     try:
+        # Преобразуем request_id в обычный int (если это numpy.int64)
+        request_id = int(request_id)
+        
         data = {
             'request_id': request_id,
             'comment': comment_text.strip(),
@@ -93,7 +96,7 @@ def add_comment(request_id, comment_text, author="Заведующий"):
         return True, "Комментарий добавлен"
     except Exception as e:
         return False, f"Ошибка при добавлении комментария: {str(e)}"
-
+        
 # НОВАЯ ФУНКЦИЯ: Удаление комментария
 def delete_comment(comment_id):
     """Удаляет комментарий по ID"""
@@ -297,6 +300,8 @@ def show_statistics():
 # НОВАЯ ФУНКЦИЯ: Отображение комментариев к заявке
 def show_comments_for_request(request_id):
     """Отображает комментарии для конкретной заявки и позволяет добавлять новые"""
+    request_id = int(request_id)
+    
     st.markdown("---")
     st.subheader("💬 Комментарии к заявке")
     
