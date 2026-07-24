@@ -190,7 +190,12 @@ def add_comment_with_user(request_id, comment_text, username):
             'created_at': datetime.now().isoformat()
         }
         response = supabase.table('comments').insert(data).execute()
-        return True, "Комментарий добавлен"
+        
+        # Проверяем, что комментарий действительно добавился
+        if response.data:
+            return True, "Комментарий добавлен"
+        else:
+            return False, "Ошибка при добавлении комментария"
     except Exception as e:
         return False, f"Ошибка при добавлении комментария: {str(e)}"
 
@@ -252,11 +257,13 @@ def add_comment(request_id, comment_text, author="Заведующий"):
 def delete_comment(comment_id):
     supabase = get_supabase()
     try:
-        supabase.table('comments').delete().eq('id', comment_id).execute()
-        return True, "Комментарий удален"
+        response = supabase.table('comments').delete().eq('id', comment_id).execute()
+        if response.data:
+            return True, "Комментарий удален"
+        else:
+            return False, "Комментарий не найден"
     except Exception as e:
         return False, f"Ошибка при удалении комментария: {str(e)}"
-
 def delete_request(request_id):
     try:
         supabase = get_supabase()
@@ -500,6 +507,7 @@ def show_comments_for_request(request_id, user_role, username):
     
     st.markdown("### ✏️ Добавить комментарий")
     
+    # Используем форму для добавления комментария
     with st.form(key=f"add_comment_form_{request_id}"):
         comment_text = st.text_area("Текст комментария", placeholder="Введите ваш комментарий...", key=f"comment_text_{request_id}")
         col1, col2, col3 = st.columns([3, 1, 1])
@@ -512,8 +520,10 @@ def show_comments_for_request(request_id, user_role, username):
                 success, msg = add_comment_with_user(request_id, comment_text, username)
                 if success:
                     st.success("✅ Комментарий добавлен")
-                    time.sleep(0.5)
-                    st.rerun()
+                    # Убираем st.rerun() - данные обновятся при следующем обращении
+                    # Вместо этого показываем сообщение и очищаем форму
+                    st.session_state[f"comment_text_{request_id}"] = ""  # Очищаем поле
+                    st.rerun()  # Оставляем только один rerun в конце
                 else:
                     st.error(f"❌ {msg}")
             else:
