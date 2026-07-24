@@ -464,16 +464,9 @@ def show_dormitory_requests_with_control(dormitory):
             if not comments_df.empty:
                 comments_list = []
                 for _, comment in comments_df.iterrows():
-                    author = comment.get('author', '')
                     text = comment.get('comment', '')
-                    created_at = comment.get('created_at', '')
-                    if isinstance(created_at, str):
-                        try:
-                            dt = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
-                            created_at = dt.strftime('%d.%m.%Y %H:%M')
-                        except:
-                            created_at = ''
-                    comments_list.append(f"[{created_at}] {author}: {text}")
+                    comments_list.append(text)
+                # Объединяем все комментарии в один текст с переносами строк
                 comments_dict[request_id] = "\n".join(comments_list)
             else:
                 comments_dict[request_id] = ""
@@ -522,7 +515,7 @@ def show_dormitory_requests_with_control(dormitory):
             "Комментарии": st.column_config.TextColumn(
                 "💬 Комментарии",
                 width="large",
-                help="Напишите комментарий к заявке. Каждый новый комментарий начинайте с новой строки"
+                help="Введите комментарии. Каждый новый комментарий с новой строки"
             ),
         }
         
@@ -540,38 +533,35 @@ def show_dormitory_requests_with_control(dormitory):
         for i in range(len(edited_df)):
             st.session_state[checkbox_key][i] = edited_df.loc[i, "Выбрать"]
         
-        # ---------- ОБРАБОТКА ИЗМЕНЕНИЙ В КОММЕНТАРИЯХ (исправленная версия) ----------
-        comments_added = False
+        # ---------- НОВАЯ ЛОГИКА ОБРАБОТКИ КОММЕНТАРИЕВ ----------
+        comments_changed = False
         for i in range(len(edited_df)):
             request_id = int(edit_df.loc[i, "ID"])
             old_comments = edit_df.loc[i, "Комментарии"] if i < len(edit_df) else ""
             new_comments = edited_df.loc[i, "Комментарии"] if i < len(edited_df) else ""
             
             # Если комментарии изменились
-            if new_comments != old_comments and new_comments:
-                # Получаем существующие комментарии из базы
-                existing_comments_df = load_comments(request_id)
-                existing_texts = set()
-                if not existing_comments_df.empty:
-                    for _, comm in existing_comments_df.iterrows():
-                        existing_texts.add(comm.get('comment', ''))
+            if new_comments != old_comments:
+                # Удаляем все старые комментарии для этой заявки
+                supabase = get_supabase()
+                supabase.table('comments').delete().eq('request_id', request_id).execute()
                 
-                # Разбиваем новые комментарии на строки
-                new_lines = [line.strip() for line in new_comments.split('\n') if line.strip()]
-                
-                # Добавляем только те, которых еще нет
-                for line in new_lines:
-                    # Проверяем, существует ли такой комментарий уже
-                    if line not in existing_texts and line:
+                # Если есть новые комментарии, добавляем их
+                if new_comments and new_comments.strip():
+                    # Разбиваем на строки и фильтруем пустые
+                    lines = [line.strip() for line in new_comments.split('\n') if line.strip()]
+                    
+                    # Добавляем каждый комментарий
+                    for line in lines:
                         success, msg = add_comment(request_id, line, author="Заведующий")
                         if success:
-                            comments_added = True
-                            # Добавляем в множество, чтобы избежать дублирования в этой итерации
-                            existing_texts.add(line)
+                            comments_changed = True
+                else:
+                    comments_changed = True
         
-        # Если были добавлены комментарии, обновляем страницу только один раз
-        if comments_added:
-            st.success("✅ Комментарии добавлены")
+        # Если были изменения, обновляем страницу
+        if comments_changed:
+            st.success("✅ Комментарии обновлены")
             time.sleep(0.5)
             st.rerun()
         
