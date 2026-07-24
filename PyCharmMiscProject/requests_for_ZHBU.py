@@ -783,4 +783,161 @@ def show_all_requests_with_control():
         filtered_df["Дата"] = pd.to_datetime(filtered_df["Дата"])
         filtered_df = filtered_df[(filtered_df["Дата"] >= pd.Timestamp(start_date)) & (filtered_df["Дата"] <= pd.Timestamp(end_date))]
     
-    filtered_df["Дата"] = pd.to_datetime(filtered_df["
+    filtered_df["Дата"] = pd.to_datetime(filtered_df["Дата"]).dt.strftime("%d.%m.%Y")
+    
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.metric("Всего", len(filtered_df))
+    with col2:
+        st.metric("Новых", len(filtered_df[filtered_df["Статус"] == "Новая"]))
+    with col3:
+        st.metric("В работе", len(filtered_df[filtered_df["Статус"] == "В работе"]))
+    with col4:
+        st.metric("Выполнено", len(filtered_df[filtered_df["Статус"] == "Выполнена"]))
+    
+    st.markdown("---")
+    
+    if not filtered_df.empty:
+        checkbox_key_all = "checkbox_all_state"
+        
+        if checkbox_key_all not in st.session_state:
+            st.session_state[checkbox_key_all] = {i: False for i in range(len(filtered_df))}
+        
+        edit_df = filtered_df.copy()
+        edit_df = edit_df.reset_index(drop=True)
+        
+        # Добавляем колонку с комментариями
+        edit_df["💬 Комментарии"] = ""
+        for i in range(len(edit_df)):
+            request_id = edit_df.loc[i, "ID"]
+            comments_df = load_comments(request_id)
+            comment_count = len(comments_df)
+            edit_df.loc[i, "💬 Комментарии"] = f"💬 {comment_count}"
+        
+        checkbox_values = []
+        for i in range(len(edit_df)):
+            checkbox_values.append(st.session_state[checkbox_key_all].get(i, False))
+        
+        edit_df.insert(0, "Выбрать", checkbox_values)
+        
+        editor_key = "data_editor_all"
+        
+        column_config = {
+            "Выбрать": st.column_config.CheckboxColumn(
+                "Выбрать",
+                help="Отметьте заявки для редактирования",
+                default=False,
+            ),
+            "ID": st.column_config.NumberColumn("№", help="Номер заявки", width="small"),
+            "Статус": st.column_config.TextColumn("Статус", width="small"),
+            "💬 Комментарии": st.column_config.TextColumn("💬 Комментарии", width="small"),
+        }
+        
+        edited_df = st.data_editor(
+            edit_df,
+            use_container_width=True,
+            hide_index=True,
+            column_config=column_config,
+            disabled=["ID", "Дата", "Время", "ФИО студента", "Email", "Общежитие", "Комната", "Тип заявки", "Описание", "Статус", "💬 Комментарии"],
+            key=editor_key
+        )
+        
+        # Показываем комментарии для каждой заявки
+        for i in range(len(edit_df)):
+            request_id = edit_df.loc[i, "ID"]
+            with st.expander(f"💬 Комментарии к заявке №{request_id} - {edit_df.loc[i, 'ФИО студента']}"):
+                show_comments_for_request(request_id)
+        
+        for i in range(len(edited_df)):
+            st.session_state[checkbox_key_all][i] = edited_df.loc[i, "Выбрать"]
+        
+        selected_ids = []
+        for i in range(len(edited_df)):
+            if edited_df.loc[i, "Выбрать"]:
+                selected_ids.append(edit_df.loc[i, "ID"])
+        
+        if selected_ids:
+            st.success(f"✅ Выбрано заявок: {len(selected_ids)}")
+        else:
+            st.info("ℹ️ Отметьте заявки в колонке 'Выбрать' для редактирования")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            if st.button("✅ Выбрать все", use_container_width=True, key="select_all_all"):
+                for i in range(len(edit_df)):
+                    st.session_state[checkbox_key_all][i] = True
+                st.rerun()
+            
+            if st.button("❌ Снять все", use_container_width=True, key="deselect_all_all"):
+                for i in range(len(edit_df)):
+                    st.session_state[checkbox_key_all][i] = False
+                st.rerun()
+        
+        with col2:
+            new_status_bulk = st.selectbox(
+                "Новый статус",
+                ["Новая", "В работе", "Выполнена"],
+                key="bulk_status_all",
+                label_visibility="collapsed"
+            )
+            
+            if st.button(f"🔄 Изменить статус ({len(selected_ids)})", use_container_width=True, key="bulk_update_all"):
+                success_count = 0
+                for id in selected_ids:
+                    if update_status_with_notification(id, new_status_bulk):
+                        success_count += 1
+                if success_count > 0:
+                    st.success(f"✅ Статус изменен для {success_count} заявок")
+                    for i in range(len(edit_df)):
+                        st.session_state[checkbox_key_all][i] = False
+                    time.sleep(1)
+                    st.rerun()
+                else:
+                    st.error("❌ Ошибка при обновлении статусов")
+        
+        if st.session_state.get('show_bulk_delete_confirm_all', False):
+            with st.container():
+                st.warning(f"⚠️ Удалить {len(st.session_state.bulk_delete_ids_all)} заявок?")
+                col_yes, col_no = st.columns(2)
+                with col_yes:
+                    if st.button("✅ Да", use_container_width=True, key="confirm_bulk_all"):
+                        success_count = 0
+                        for id in st.session_state.bulk_delete_ids_all:
+                            success, _ = delete_request(id)
+                            if success:
+                                success_count += 1
+                        if success_count > 0:
+                            st.success(f"✅ Удалено заявок: {success_count}")
+                            st.session_state.show_bulk_delete_confirm_all = False
+                            st.session_state.bulk_delete_ids_all = []
+                            for i in range(len(edit_df)):
+                                st.session_state[checkbox_key_all][i] = False
+                            time.sleep(1)
+                            st.rerun()
+                        else:
+                            st.error("❌ Ошибка при удалении")
+                    with col_no:
+                        if st.button("❌ Нет", use_container_width=True, key="cancel_bulk_all"):
+                            st.session_state.show_bulk_delete_confirm_all = False
+                            st.session_state.bulk_delete_ids_all = []
+                            st.rerun()
+
+        if st.button(f"🗑️ Удалить ({len(selected_ids)})", use_container_width=True, key="bulk_delete_all", type="primary"):
+            st.session_state.show_bulk_delete_confirm_all = True
+            st.session_state.bulk_delete_ids_all = selected_ids
+        
+        excel_data = to_excel(filtered_df)
+        st.download_button(
+            label="📊 Скачать в Excel формате",
+            data=excel_data,
+            file_name=f"Все_заявки_{datetime.now().strftime('%d.%m.%Y_%H:%M:%S')}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            use_container_width=True,
+            key="export_all"
+        )
+    else:
+        st.warning("Нет заявок для отображения")
+        
+if __name__ == "__main__":
+    main()
