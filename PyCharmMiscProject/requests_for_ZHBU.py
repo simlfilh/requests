@@ -540,30 +540,40 @@ def show_dormitory_requests_with_control(dormitory):
         for i in range(len(edited_df)):
             st.session_state[checkbox_key][i] = edited_df.loc[i, "Выбрать"]
         
-        # ---------- ОБРАБОТКА ИЗМЕНЕНИЙ В КОММЕНТАРИЯХ ----------
+        # ---------- ОБРАБОТКА ИЗМЕНЕНИЙ В КОММЕНТАРИЯХ (исправленная версия) ----------
+        comments_added = False
         for i in range(len(edited_df)):
             request_id = int(edit_df.loc[i, "ID"])
             old_comments = edit_df.loc[i, "Комментарии"] if i < len(edit_df) else ""
             new_comments = edited_df.loc[i, "Комментарии"] if i < len(edited_df) else ""
             
             # Если комментарии изменились
-            if new_comments != old_comments:
-                old_lines = set(old_comments.split('\n')) if old_comments else set()
-                new_lines = set(new_comments.split('\n')) if new_comments else set()
+            if new_comments != old_comments and new_comments:
+                # Получаем существующие комментарии из базы
+                existing_comments_df = load_comments(request_id)
+                existing_texts = set()
+                if not existing_comments_df.empty:
+                    for _, comm in existing_comments_df.iterrows():
+                        existing_texts.add(comm.get('comment', ''))
                 
-                added_lines = new_lines - old_lines
-                added_lines = [line for line in added_lines if line.strip()]
+                # Разбиваем новые комментарии на строки
+                new_lines = [line.strip() for line in new_comments.split('\n') if line.strip()]
                 
-                if added_lines:
-                    for line in added_lines:
-                        if line.strip():
-                            success, msg = add_comment(request_id, line.strip(), author="Заведующий")
-                            if success:
-                                st.success(f"✅ Комментарий добавлен к заявке №{request_id}")
-                                time.sleep(0.3)
-                                st.rerun()
-                            else:
-                                st.error(f"❌ {msg}")
+                # Добавляем только те, которых еще нет
+                for line in new_lines:
+                    # Проверяем, существует ли такой комментарий уже
+                    if line not in existing_texts and line:
+                        success, msg = add_comment(request_id, line, author="Заведующий")
+                        if success:
+                            comments_added = True
+                            # Добавляем в множество, чтобы избежать дублирования в этой итерации
+                            existing_texts.add(line)
+        
+        # Если были добавлены комментарии, обновляем страницу только один раз
+        if comments_added:
+            st.success("✅ Комментарии добавлены")
+            time.sleep(0.5)
+            st.rerun()
         
         # Получаем выбранные ID
         selected_ids = []
