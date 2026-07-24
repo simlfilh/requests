@@ -745,7 +745,6 @@ def main():
     # Навигация в зависимости от роли
     if user_role == "head":
         # Заведующий видит только свое общежитие
-        st.subheader("📋 Ваше общежитие")
         show_dormitory_requests_with_control(user_dormitory, user_role, user_name)
         
         # Кнопка для статистики
