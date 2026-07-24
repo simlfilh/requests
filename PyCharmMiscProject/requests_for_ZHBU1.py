@@ -371,57 +371,60 @@ def send_status_notification(student_email, student_name, request_id, new_status
 
 def to_excel(df):
     output = BytesIO()
+    
+    # Создаем копию DataFrame без столбца is_anonymous (если он существует)
+    df_to_export = df.copy()
+    if 'is_anonymous' in df_to_export.columns:
+        df_to_export = df_to_export.drop(columns=['is_anonymous'])
+    
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        df.to_excel(writer, index=False, sheet_name='Заявки')
+        df_to_export.to_excel(writer, index=False, sheet_name='Заявки')
         
         workbook = writer.book
         worksheet = writer.sheets['Заявки']
         
         from openpyxl.styles import Alignment
         
-        column_widths = {
-            'A': 4, 'B': 11, 'C': 9, 'D': 30, 'E': 29,
-            'F': 37, 'G': 8, 'H': 16, 'I': 60, 'J': 11
-        }
-        for col_letter, width in column_widths.items():
-            worksheet.column_dimensions[col_letter].width = width
+        # Автоматически определяем ширину столбцов
+        for column in worksheet.columns:
+            max_length = 0
+            column_letter = column[0].column_letter
+            for cell in column:
+                try:
+                    if cell.value:
+                        # Проверяем длину содержимого
+                        text_length = len(str(cell.value))
+                        if text_length > max_length:
+                            max_length = text_length
+                except:
+                    pass
+            # Устанавливаем ширину с запасом, но не более 60 символов
+            adjusted_width = min(max_length + 2, 60)
+            worksheet.column_dimensions[column_letter].width = adjusted_width
         
+        # Автоматическая высота строк для всех столбцов
         for row_idx in range(2, worksheet.max_row + 1):
             max_height = 25
-            
-            for col_letter in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']:
+            for col_letter in worksheet.column_dimensions:
                 cell = worksheet[f'{col_letter}{row_idx}']
                 if cell.value:
                     text = str(cell.value)
-                    
-                    if col_letter == 'I':
-                        chars_per_line = 60
-                        lines = (len(text) // chars_per_line) + 1
-                        height_needed = lines * 18
-                        if height_needed > max_height:
-                            max_height = min(height_needed, 150)
-                    else:
-                        if len(text) > 30:
-                            lines = (len(text) // 30) + 1
-                            height_needed = lines * 18
-                            if height_needed > max_height:
-                                max_height = min(height_needed, 80)
-            
+                    col_width = worksheet.column_dimensions[col_letter].width or 10
+                    chars_per_line = int(col_width * 1.2)
+                    lines = (len(text) // chars_per_line) + 1 if chars_per_line > 0 else 1
+                    height_needed = lines * 18
+                    if height_needed > max_height:
+                        max_height = min(height_needed, 150)
             worksheet.row_dimensions[row_idx].height = max_height
         
+        # Выравнивание для всех ячеек
         for row in worksheet.iter_rows():
             for cell in row:
-                if cell.column_letter == 'I':
-                    cell.alignment = Alignment(
-                        horizontal='left',
-                        vertical='center',
-                        wrap_text=True
-                    )
-                else:
-                    cell.alignment = Alignment(
-                        horizontal='left',
-                        vertical='center'
-                    )
+                cell.alignment = Alignment(
+                    horizontal='left',
+                    vertical='center',
+                    wrap_text=True
+                )
         
         worksheet.freeze_panes = 'A2'
         
