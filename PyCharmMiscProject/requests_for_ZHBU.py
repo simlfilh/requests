@@ -35,44 +35,44 @@ SMTP_PASSWORD = st.secrets["SMTP_PASSWORD"]
 # Система пользователей с паролями из secrets
 USERS = {
     # Заведующие (5 человек)
-    "head_1": {
-        "username": "head_1",
-        "password": hashlib.sha256(st.secrets["PASSWORD_HEAD_1"].encode()).hexdigest(),
-        "role": "head",
-        "name": "Заведующий №1",
-        "dormitory": "Общежитие №2 | Чкаловский пр-т, д. 27"
-    },
-    "head_2": {
-        "username": "head_2",
+    "4295": {
+        "username": "4295",
         "password": hashlib.sha256(st.secrets["PASSWORD_HEAD_2"].encode()).hexdigest(),
         "role": "head",
-        "name": "Заведующий №2",
-        "dormitory": "Общежитие №3 | пр-т Косыгина, д. 19, к. 2"
-    },
-    "head_3": {
-        "username": "head_3",
-        "password": hashlib.sha256(st.secrets["PASSWORD_HEAD_3"].encode()).hexdigest(),
-        "role": "head",
-        "name": "Заведующий №3",
-        "dormitory": "Общежитие №4 | ул. Воронежская, д. 69"
-    },
-    "head_4": {
-        "username": "head_4",
-        "password": hashlib.sha256(st.secrets["PASSWORD_HEAD_4"].encode()).hexdigest(),
-        "role": "head",
-        "name": "Заведующий №4",
-        "dormitory": "Общежитие №7 | ул. Воронежская, д. 38"
-    },
-    "head_5": {
-        "username": "head_5",
-        "password": hashlib.sha256(st.secrets["PASSWORD_HEAD_5"].encode()).hexdigest(),
-        "role": "head",
-        "name": "Заведующий №5",
+        "name": "Беззубова Зоя Николаевна ",
         "dormitory": "Общежитие №2 | Чкаловский пр-т, д. 27"
     },
+    "1132": {
+        "username": "1132",
+        "password": hashlib.sha256(st.secrets["PASSWORD_HEAD_3"].encode()).hexdigest(),
+        "role": "head",
+        "name": "Васильев Александр Владимирович",
+        "dormitory": "Общежитие №3 | пр-т Косыгина, д. 19, к. 2"
+    },
+    "4938": {
+        "username": "4938",
+        "password": hashlib.sha256(st.secrets["PASSWORD_HEAD_41"].encode()).hexdigest(),
+        "role": "head",
+        "name": "Бровкина Наталья Анатольевна",
+        "dormitory": "Общежитие №4 | ул. Воронежская, д. 69"
+    },
+    "4293": {
+        "username": "4293",
+        "password": hashlib.sha256(st.secrets["PASSWORD_HEAD_42"].encode()).hexdigest(),
+        "role": "head",
+        "name": "Гунько Валентина Шахиевна",
+        "dormitory": "Общежитие №4 | наб. канала Грибоедова, д. 30-32, лит. Б"
+    },
+    "4961": {
+        "username": "4961",
+        "password": hashlib.sha256(st.secrets["PASSWORD_HEAD_7"].encode()).hexdigest(),
+        "role": "head",
+        "name": "Малышева Елена Андреевна",
+        "dormitory": "Общежитие №7 | ул. Воронежская, д. 38"
+    },
     # Сотрудник ЖБУ (1 человек)
-    "jbu_worker": {
-        "username": "jbu_worker",
+    "414244": {
+        "username": "414244",
         "password": hashlib.sha256(st.secrets["PASSWORD_JBU_WORKER"].encode()).hexdigest(),
         "role": "jbu",
         "name": "Сотрудник ЖБУ",
@@ -728,7 +728,7 @@ def main():
     # Показываем приветствие и кнопку выхода
     col1, col2, col3 = st.columns([4, 1, 1])
     with col1:
-        st.title(f"👋 Здравствуйте, {user_name}!")
+        st.title(f"{user_name}!")
         if user_role == "head":
             st.caption(f"🏢 Ваше общежитие: {user_dormitory.split('|')[0].strip()}")
         else:
