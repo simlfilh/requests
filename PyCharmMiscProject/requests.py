@@ -19,7 +19,6 @@ SUPABASE_URL = st.secrets["SUPABASE_URL"]
 SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
 SMTP_EMAIL = st.secrets["SMTP_EMAIL"]
 SMTP_PASSWORD = st.secrets["SMTP_PASSWORD"]
-PASSWORD = st.secrets["PASSWORD"] 
 
 
 DORMITORIES = [
