@@ -507,8 +507,10 @@ def show_comments_for_request(request_id, user_role, username):
     
     st.markdown("### ✏️ Добавить комментарий")
     
-    # Используем form с submit - как в show_all_requests_with_control
-    with st.form(key=f"add_comment_form_{request_id}"):
+    # Используем уникальный ключ для формы
+    form_key = f"add_comment_form_{request_id}_{int(datetime.now().timestamp())}"
+    
+    with st.form(key=form_key):
         comment_text = st.text_area("Текст комментария", placeholder="Введите ваш комментарий...", key=f"comment_text_{request_id}")
         submitted = st.form_submit_button("💬 Отправить")
         
@@ -517,9 +519,10 @@ def show_comments_for_request(request_id, user_role, username):
                 success, msg = add_comment_with_user(request_id, comment_text, username)
                 if success:
                     st.success("✅ Комментарий добавлен")
-                    # Очищаем поле ввода через session_state
-                    if f"comment_text_{request_id}" in st.session_state:
-                        st.session_state[f"comment_text_{request_id}"] = ""
+                    # Очищаем поле
+                    st.session_state[f"comment_text_{request_id}"] = ""
+                    # Обновляем страницу через 1 секунду
+                    time.sleep(1)
                     st.rerun()
                 else:
                     st.error(f"❌ {msg}")
