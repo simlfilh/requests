@@ -369,45 +369,43 @@ def send_status_notification(student_email, student_name, request_id, new_status
         print(f"Ошибка отправки: {e}")
         return False
 
-def to_excel(df, include_comments=True):
+def to_excel(df, comments_dict=None):
     """Экспортирует данные в Excel с комментариями"""
     output = BytesIO()
     
-    df_export = df.copy()
+    # Если передан словарь с комментариями, добавляем их в датафрейм
+    if comments_dict is not None:
+        df_with_comments = df.copy()
+        df_with_comments["Комментарии"] = df_with_comments["ID"].map(comments_dict)
+    else:
+        df_with_comments = df.copy()
+        if "Комментарии" not in df_with_comments.columns:
+            df_with_comments["Комментарии"] = ""
     
-    if include_comments and "ID" in df_export.columns:
-        # Добавляем колонку с комментариями
-        comments_list = []
-        for _, row in df_export.iterrows():
-            request_id = row['ID']
-            comments_df = load_comments_with_users(request_id)
-            if not comments_df.empty:
-                comments_text = []
-                for _, comment in comments_df.iterrows():
-                    author = comment.get('author_display', comment.get('author', 'Система'))
-                    text = comment.get('comment', '')
-                    created_at = comment.get('created_at', '')
-                    if isinstance(created_at, str):
-                        try:
-                            dt = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
-                            created_at = dt.strftime('%d.%m.%Y %H:%M')
-                        except:
-                            created_at = ''
-                    comments_text.append(f"[{created_at}] {author}: {text}")
-                comments_list.append("\n".join(comments_text))
-            else:
-                comments_list.append("")
-        df_export["Комментарии"] = comments_list
+    # Явно выбираем колонки для экспорта (все, кроме is_anonymous)
+    columns_to_keep = []
+    for col in df_with_comments.columns:
+        # Пропускаем служебные колонки
+        if col.lower() not in ['is_anonymous', 'author_username', 'author']:
+            columns_to_keep.append(col)
+    
+    # Если есть колонка ID, оставляем её
+    if 'ID' in columns_to_keep:
+        # Перемещаем ID в начало
+        columns_to_keep.remove('ID')
+        columns_to_keep = ['ID'] + columns_to_keep
+    
+    df_final = df_with_comments[columns_to_keep]
     
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        df_export.to_excel(writer, index=False, sheet_name='Заявки')
+        df_final.to_excel(writer, index=False, sheet_name='Заявки')
         
         workbook = writer.book
         worksheet = writer.sheets['Заявки']
         
         from openpyxl.styles import Alignment
         
-        # Настройка ширины колонок
+        # Автоматическая ширина колонок
         for column in worksheet.columns:
             max_length = 0
             column_letter = column[0].column_letter
@@ -424,7 +422,7 @@ def to_excel(df, include_comments=True):
             adjusted_width = max(min(max_length + 2, 50), 10)
             worksheet.column_dimensions[column_letter].width = adjusted_width
         
-        # Настройка высоты строк и переноса
+        # Настройка высоты строк и переноса текста
         for row in worksheet.iter_rows(min_row=2):
             max_height = 25
             for cell in row:
