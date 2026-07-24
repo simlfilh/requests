@@ -369,59 +369,80 @@ def send_status_notification(student_email, student_name, request_id, new_status
         print(f"Ошибка отправки: {e}")
         return False
 
-def to_excel(df):
+def to_excel(df, include_comments=True):
+    """Экспортирует данные в Excel с комментариями"""
     output = BytesIO()
+    
+    df_export = df.copy()
+    
+    if include_comments and "ID" in df_export.columns:
+        # Добавляем колонку с комментариями
+        comments_list = []
+        for _, row in df_export.iterrows():
+            request_id = row['ID']
+            comments_df = load_comments_with_users(request_id)
+            if not comments_df.empty:
+                comments_text = []
+                for _, comment in comments_df.iterrows():
+                    author = comment.get('author_display', comment.get('author', 'Система'))
+                    text = comment.get('comment', '')
+                    created_at = comment.get('created_at', '')
+                    if isinstance(created_at, str):
+                        try:
+                            dt = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+                            created_at = dt.strftime('%d.%m.%Y %H:%M')
+                        except:
+                            created_at = ''
+                    comments_text.append(f"[{created_at}] {author}: {text}")
+                comments_list.append("\n".join(comments_text))
+            else:
+                comments_list.append("")
+        df_export["Комментарии"] = comments_list
+    
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        df.to_excel(writer, index=False, sheet_name='Заявки')
+        df_export.to_excel(writer, index=False, sheet_name='Заявки')
         
         workbook = writer.book
         worksheet = writer.sheets['Заявки']
         
         from openpyxl.styles import Alignment
         
-        column_widths = {
-            'A': 4, 'B': 11, 'C': 9, 'D': 30, 'E': 29,
-            'F': 37, 'G': 8, 'H': 16, 'I': 60, 'J': 11
-        }
-        for col_letter, width in column_widths.items():
-            worksheet.column_dimensions[col_letter].width = width
-        
-        for row_idx in range(2, worksheet.max_row + 1):
-            max_height = 25
+        # Настройка ширины колонок
+        for column in worksheet.columns:
+            max_length = 0
+            column_letter = column[0].column_letter
             
-            for col_letter in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']:
-                cell = worksheet[f'{col_letter}{row_idx}']
+            for cell in column:
+                try:
+                    if cell.value:
+                        length = len(str(cell.value))
+                        if length > max_length:
+                            max_length = min(length, 50)
+                except:
+                    pass
+            
+            adjusted_width = max(min(max_length + 2, 50), 10)
+            worksheet.column_dimensions[column_letter].width = adjusted_width
+        
+        # Настройка высоты строк и переноса
+        for row in worksheet.iter_rows(min_row=2):
+            max_height = 25
+            for cell in row:
                 if cell.value:
                     text = str(cell.value)
-                    
-                    if col_letter == 'I':
-                        chars_per_line = 60
-                        lines = (len(text) // chars_per_line) + 1
+                    if len(text) > 30:
+                        lines = (len(text) // 40) + 1
                         height_needed = lines * 18
                         if height_needed > max_height:
                             max_height = min(height_needed, 150)
-                    else:
-                        if len(text) > 30:
-                            lines = (len(text) // 30) + 1
-                            height_needed = lines * 18
-                            if height_needed > max_height:
-                                max_height = min(height_needed, 80)
-            
-            worksheet.row_dimensions[row_idx].height = max_height
-        
-        for row in worksheet.iter_rows():
-            for cell in row:
-                if cell.column_letter == 'I':
+                    
                     cell.alignment = Alignment(
                         horizontal='left',
                         vertical='center',
                         wrap_text=True
                     )
-                else:
-                    cell.alignment = Alignment(
-                        horizontal='left',
-                        vertical='center'
-                    )
+            
+            worksheet.row_dimensions[row[0].row].height = max_height
         
         worksheet.freeze_panes = 'A2'
         
