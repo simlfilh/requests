@@ -788,7 +788,8 @@ def main():
     if "show_all_requests" not in st.session_state:
         st.session_state.show_all_requests = False
     if "show_bulk_delete_confirm_all" not in st.session_state:
-        st.session_state.show_bulk_delete_confirm_all = False    if "bulk_delete_ids_all" not in st.session_state:
+        st.session_state.show_bulk_delete_confirm_all = False    
+    if "bulk_delete_ids_all" not in st.session_state:
         st.session_state.bulk_delete_ids_all = []
     
     st.title("🔐 Панель сотрудника ЖБУ | Управление электронными заявками")
