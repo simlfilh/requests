@@ -337,7 +337,7 @@ def show_comments_editor(dormitory, category, df):
     
     st.caption(f"Количество заявок: {len(df)}")
     
-    # Загружаем комментарии
+    # Загружаем комментарии из базы
     comments_dict = get_comments_dict(df)
     df_with_comments = df.copy()
     df_with_comments["Комментарии"] = df_with_comments["ID"].map(comments_dict)
@@ -368,34 +368,48 @@ def show_comments_editor(dormitory, category, df):
     for i in range(len(edited_df)):
         st.session_state[checkbox_key][i] = edited_df.loc[i, "Выбрать"]
     
-    # Обработка изменений комментариев
-    comments_changed = False
+    # ---------- ОБРАБОТКА ИЗМЕНЕНИЙ КОММЕНТАРИЕВ (исправленная версия) ----------
+    comments_updated = False
+    
     for i in range(len(edited_df)):
         request_id = int(edit_df.loc[i, "ID"])
-        new_comments = edited_df.loc[i, "Комментарии"] if i < len(edited_df) else ""
+        new_comments_text = edited_df.loc[i, "Комментарии"] if i < len(edited_df) else ""
         
-        # Получаем текущие комментарии из базы
+        # Получаем текущие комментарии из базы ДАННЫХ (не из edit_df!)
         current_comments_df = load_comments(request_id)
-        current_text = format_comments(current_comments_df)
+        current_comments_list = []
+        for _, comment in current_comments_df.iterrows():
+            text = comment.get('comment', '')
+            if text:
+                current_comments_list.append(text)
+        current_text = "\n".join(current_comments_list)
         
-        if new_comments != current_text:
-            # Удаляем старые комментарии
+        # Нормализуем для сравнения (удаляем лишние пробелы в конце строк)
+        new_text_normalized = "\n".join([line.strip() for line in new_comments_text.split('\n') if line.strip()]) if new_comments_text else ""
+        current_text_normalized = "\n".join([line.strip() for line in current_text.split('\n') if line.strip()]) if current_text else ""
+        
+        # Если текст изменился
+        if new_text_normalized != current_text_normalized:
             supabase = get_supabase()
+            
+            # Удаляем все старые комментарии
             supabase.table('comments').delete().eq('request_id', request_id).execute()
             
-            # Добавляем новые
-            if new_comments and new_comments.strip():
-                for line in new_comments.split('\n'):
-                    line = line.strip()
+            # Добавляем новые комментарии
+            if new_comments_text and new_comments_text.strip():
+                lines = [line.strip() for line in new_comments_text.split('\n') if line.strip()]
+                for line in lines:
                     if line:
                         add_comment(request_id, line, author="Заведующий")
-                        comments_changed = True
+                        comments_updated = True
             else:
-                comments_changed = True
+                comments_updated = True
     
-    # Обновление страницы при изменениях
-    if comments_changed:
+    # Обновляем страницу ТОЛЬКО если были изменения
+    if comments_updated:
         st.success("✅ Комментарии обновлены")
+        # Очищаем кэш, чтобы при следующей загрузке были свежие данные
+        st.cache_data.clear()
         time.sleep(0.5)
         st.rerun()
     
@@ -640,30 +654,47 @@ def show_all_requests_with_control():
     for i in range(len(edited_df)):
         st.session_state[checkbox_key][i] = edited_df.loc[i, "Выбрать"]
     
-    # Обработка изменений комментариев
-    comments_changed = False
+    # ---------- ОБРАБОТКА ИЗМЕНЕНИЙ КОММЕНТАРИЕВ (исправленная версия) ----------
+    comments_updated = False
+    
     for i in range(len(edited_df)):
         request_id = int(edit_df.loc[i, "ID"])
-        new_comments = edited_df.loc[i, "Комментарии"] if i < len(edited_df) else ""
+        new_comments_text = edited_df.loc[i, "Комментарии"] if i < len(edited_df) else ""
         
+        # Получаем текущие комментарии из базы ДАННЫХ
         current_comments_df = load_comments(request_id)
-        current_text = format_comments(current_comments_df)
+        current_comments_list = []
+        for _, comment in current_comments_df.iterrows():
+            text = comment.get('comment', '')
+            if text:
+                current_comments_list.append(text)
+        current_text = "\n".join(current_comments_list)
         
-        if new_comments != current_text:
+        # Нормализуем для сравнения
+        new_text_normalized = "\n".join([line.strip() for line in new_comments_text.split('\n') if line.strip()]) if new_comments_text else ""
+        current_text_normalized = "\n".join([line.strip() for line in current_text.split('\n') if line.strip()]) if current_text else ""
+        
+        # Если текст изменился
+        if new_text_normalized != current_text_normalized:
             supabase = get_supabase()
+            
+            # Удаляем все старые комментарии
             supabase.table('comments').delete().eq('request_id', request_id).execute()
             
-            if new_comments and new_comments.strip():
-                for line in new_comments.split('\n'):
-                    line = line.strip()
+            # Добавляем новые комментарии
+            if new_comments_text and new_comments_text.strip():
+                lines = [line.strip() for line in new_comments_text.split('\n') if line.strip()]
+                for line in lines:
                     if line:
                         add_comment(request_id, line, author="Заведующий")
-                        comments_changed = True
+                        comments_updated = True
             else:
-                comments_changed = True
+                comments_updated = True
     
-    if comments_changed:
+    # Обновляем страницу ТОЛЬКО если были изменения
+    if comments_updated:
         st.success("✅ Комментарии обновлены")
+        st.cache_data.clear()
         time.sleep(0.5)
         st.rerun()
     
@@ -749,7 +780,6 @@ def show_all_requests_with_control():
         use_container_width=True,
         key="export_all"
     )
-
 def to_excel(df):
     output = BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
