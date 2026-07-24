@@ -728,7 +728,7 @@ def main():
     # Показываем приветствие и кнопку выхода
     col1, col2, col3 = st.columns([4, 1, 1])
     with col1:
-        st.title(f"{user_name}!")
+        st.title(f"{user_name}")
         if user_role == "head":
             st.caption(f"🏢 Ваше общежитие: {user_dormitory.split('|')[0].strip()}")
         else:
