@@ -482,7 +482,6 @@ def show_comments_for_request(request_id, user_role, username):
                     except:
                         pass
                 
-                # Используем author_display вместо author
                 author_display = comment.get('author_display', comment.get('author', 'Система'))
                 
                 st.markdown(f"""
@@ -507,28 +506,24 @@ def show_comments_for_request(request_id, user_role, username):
     
     st.markdown("### ✏️ Добавить комментарий")
     
-    # Используем уникальный ключ для формы
-    form_key = f"add_comment_form_{request_id}_{int(datetime.now().timestamp())}"
+    # Обработка без формы - напрямую
+    comment_text = st.text_area("Текст комментария", placeholder="Введите ваш комментарий...", key=f"comment_text_{request_id}")
     
-    with st.form(key=form_key):
-        comment_text = st.text_area("Текст комментария", placeholder="Введите ваш комментарий...", key=f"comment_text_{request_id}")
-        submitted = st.form_submit_button("💬 Отправить")
-        
-        if submitted:
-            if comment_text and comment_text.strip():
-                success, msg = add_comment_with_user(request_id, comment_text, username)
-                if success:
-                    st.success("✅ Комментарий добавлен")
-                    # Очищаем поле
-                    st.session_state[f"comment_text_{request_id}"] = ""
-                    # Обновляем страницу через 1 секунду
-                    time.sleep(1)
-                    st.rerun()
-                else:
-                    st.error(f"❌ {msg}")
+    if st.button("💬 Отправить", key=f"send_comment_{request_id}"):
+        if comment_text and comment_text.strip():
+            success, msg = add_comment_with_user(request_id, comment_text, username)
+            if success:
+                st.success("✅ Комментарий добавлен!")
+                # Очищаем поле
+                st.session_state[f"comment_text_{request_id}"] = ""
+                # Обновляем через 1 секунду
+                time.sleep(1)
+                st.rerun()
             else:
-                st.warning("⚠️ Введите текст комментария")
-
+                st.error(f"❌ {msg}")
+        else:
+            st.warning("⚠️ Введите текст комментария")
+            
 def show_dormitory_requests_with_control(dormitory, user_role, user_name, username):
     """Обновленная функция с передачей username"""
     df = load_requests_by_dormitory(dormitory)
