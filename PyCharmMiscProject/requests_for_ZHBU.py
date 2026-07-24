@@ -612,7 +612,7 @@ def show_dormitory_requests_with_control(dormitory, user_role, user_name, userna
         
         st.caption(f"Количество заявок: {len(cat_df)}")
         
-        # Добавляем колонку с комментариями для отображения в data_editor
+        # Используем новую функцию для комментариев с именами пользователей
         comments_dict = {}
         for _, row in cat_df.iterrows():
             request_id = row['ID']
@@ -681,7 +681,6 @@ def show_dormitory_requests_with_control(dormitory, user_role, user_name, userna
         for i in range(len(edited_df)):
             st.session_state[checkbox_key][i] = edited_df.loc[i, "Выбрать"]
         
-        # Обновление комментариев через data_editor
         comments_changed = False
         for i in range(len(edited_df)):
             request_id = int(edit_df.loc[i, "ID"])
@@ -696,7 +695,8 @@ def show_dormitory_requests_with_control(dormitory, user_role, user_name, userna
                     lines = [line.strip() for line in new_comments.split('\n') if line.strip()]
                     
                     for line in lines:
-                        success, msg = add_comment_with_user(request_id, line, username)
+                        # Используем старую функцию add_comment для надежности
+                        success, msg = add_comment(request_id, line, user_name)
                         if success:
                             comments_changed = True
                 else:
@@ -704,8 +704,8 @@ def show_dormitory_requests_with_control(dormitory, user_role, user_name, userna
         
         if comments_changed:
             st.success("✅ Комментарии обновлены")
-            time.sleep(0.5)
-            st.rerun()
+            # Убираем st.rerun() - только сообщение
+            # st.rerun()  # ЗАКОММЕНТИРОВАНО
         
         selected_ids = []
         for i in range(len(edited_df)):
@@ -746,7 +746,6 @@ def show_dormitory_requests_with_control(dormitory, user_role, user_name, userna
                     st.success(f"✅ Статус изменен для {success_count} заявок")
                     for i in range(len(edit_df)):
                         st.session_state[checkbox_key][i] = False
-                    time.sleep(1)
                     st.rerun()
                 else:
                     st.error("❌ Ошибка при обновлении статусов")
@@ -783,7 +782,6 @@ def show_dormitory_requests_with_control(dormitory, user_role, user_name, userna
                                     st.session_state[checkbox_key][i] = False
                                 st.session_state[confirm_key] = False
                                 st.session_state[f"bulk_delete_ids_{dormitory}_{category}"] = []
-                                time.sleep(1)
                                 st.rerun()
                         else:
                             with col_w2:
