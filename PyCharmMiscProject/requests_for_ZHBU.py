@@ -1240,5 +1240,3 @@ def show_all_requests_with_control(username):
         
 if __name__ == "__main__":
     main()
-
-я хочу чтобы в excel у меня скачивались все столбцы из таблицы + комментарии
