@@ -753,7 +753,7 @@ def show_dormitory_requests_with_control(dormitory, user_role, user_name, userna
                 else:
                     st.error("❌ Ошибка при обновлении статусов")
                     
-            excel_data = to_excel(cat_df)
+            excel_data = to_excel(cat_df_with_comments)
             st.download_button(
                 label=f"📊 Скачать в Excel формате",
                 data=excel_data,
