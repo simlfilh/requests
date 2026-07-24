@@ -788,6 +788,7 @@ def show_all_requests_with_control():
         st.info("Пока нет ни одной заявки.")
         return
     
+    # Переименовываем колонки как в старой версии
     display_df_all = df_all.rename(columns={
         "id": "ID",
         "date": "Дата",
@@ -859,7 +860,7 @@ def show_all_requests_with_control():
     # Преобразуем дату в формат DD.MM.YYYY для отображения
     filtered_df["Дата"] = pd.to_datetime(filtered_df["Дата"]).dt.strftime("%d.%m.%Y")
     
-    # Загружаем комментарии для каждой заявки
+    # ---------- ЗАГРУЖАЕМ КОММЕНТАРИИ ----------
     comments_dict = {}
     for _, row in filtered_df.iterrows():
         request_id = row['ID']
@@ -881,6 +882,7 @@ def show_all_requests_with_control():
         else:
             comments_dict[request_id] = ""
     
+    # Добавляем колонку с комментариями
     filtered_df["Комментарии"] = filtered_df["ID"].map(comments_dict)
     
     # Показываем метрики
@@ -915,45 +917,49 @@ def show_all_requests_with_control():
         
         edit_df.insert(0, "Выбрать", checkbox_values)
         
+        # Убираем колонку "Комментарии" из disabled, чтобы можно было редактировать
+        # Оставляем только ID, Дату, Время, ФИО, Email, Общежитие, Комнату, Тип, Описание, Статус - disabled
+        columns_for_editor = ["Выбрать", "ID", "Дата", "Время", "ФИО студента", "Email", "Общежитие", "Комната", "Тип заявки", "Описание", "Статус", "Комментарии"]
+        edit_df_display = edit_df[columns_for_editor]
+        
         # Уникальный ключ для data_editor
         editor_key = "data_editor_all"
         
-        # Настройка колонок
-        column_config = {
-            "Выбрать": st.column_config.CheckboxColumn(
-                "Выбрать",
-                help="Отметьте заявки для редактирования",
-                default=False,
-            ),
-            "ID": st.column_config.NumberColumn("№", help="Номер заявки", width="small"),
-            "Статус": st.column_config.TextColumn("Статус", width="small"),
-            "Дата": st.column_config.TextColumn("Дата", width="small"),
-            "Время": st.column_config.TextColumn("Время", width="small"),
-            "Комната": st.column_config.TextColumn("Комната", width="small"),
-            "Тип заявки": st.column_config.TextColumn("Тип заявки", width="medium"),
-            "Комментарии": st.column_config.TextColumn(
-                "💬 Комментарии",
-                width="large",
-                help="Напишите комментарий к заявке. Каждый новый комментарий начинайте с новой строки"
-            ),
-        }
-        
         # Отображаем редактируемую таблицу
         edited_df = st.data_editor(
-            edit_df,
+            edit_df_display,
             use_container_width=True,
             hide_index=True,
-            column_config=column_config,
+            column_config={
+                "Выбрать": st.column_config.CheckboxColumn(
+                    "Выбрать",
+                    help="Отметьте заявки для редактирования",
+                    default=False,
+                ),
+                "ID": st.column_config.NumberColumn(
+                    "№",
+                    help="Номер заявки",
+                    width="small",
+                ),
+                "Статус": st.column_config.TextColumn(
+                    "Статус",
+                    width="small",
+                ),
+                "Комментарии": st.column_config.TextColumn(
+                    "💬 Комментарии",
+                    width="large",
+                    help="Напишите комментарий к заявке. Каждый новый комментарий начинайте с новой строки"
+                ),
+            },
             disabled=["ID", "Дата", "Время", "ФИО студента", "Email", "Общежитие", "Комната", "Тип заявки", "Описание", "Статус"],
-            key=editor_key,
-            height=600
+            key=editor_key
         )
         
         # Обновляем состояние чекбоксов из отредактированной таблицы
         for i in range(len(edited_df)):
             st.session_state[checkbox_key_all][i] = edited_df.loc[i, "Выбрать"]
         
-        # ---------- ОБРАБОТКА ИЗМЕНЕНИЙ В КОММЕНТАРИЯХ (исправленная версия) ----------
+        # ---------- ОБРАБОТКА ИЗМЕНЕНИЙ В КОММЕНТАРИЯХ ----------
         comments_added = False
         for i in range(len(edited_df)):
             request_id = int(edit_df.loc[i, "ID"])
@@ -974,15 +980,13 @@ def show_all_requests_with_control():
                 
                 # Добавляем только те, которых еще нет
                 for line in new_lines:
-                    # Проверяем, существует ли такой комментарий уже
                     if line not in existing_texts and line:
                         success, msg = add_comment(request_id, line, author="Заведующий")
                         if success:
                             comments_added = True
-                            # Добавляем в множество, чтобы избежать дублирования в этой итерации
                             existing_texts.add(line)
         
-        # Если были добавлены комментарии, обновляем страницу только один раз
+        # Если были добавлены комментарии, обновляем страницу
         if comments_added:
             st.success("✅ Комментарии добавлены")
             time.sleep(0.5)
@@ -1016,7 +1020,7 @@ def show_all_requests_with_control():
                 st.rerun()
         
         with col2:
-            # Выбор статуса
+            # Выбор статуса (без лейбла)
             new_status_bulk = st.selectbox(
                 "Новый статус",
                 ["Новая", "В работе", "Выполнена"],
