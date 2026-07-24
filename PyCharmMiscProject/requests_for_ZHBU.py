@@ -212,62 +212,43 @@ def format_comments(comments_df):
         text = comment.get('comment', '')
         created_at = comment.get('created_at', '')
         
-        if isinstance(created_at, str):
+        # Проверяем, что created_at не None и не пустой
+        if created_at and isinstance(created_at, str):
             try:
                 dt = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
                 created_at = dt.strftime('%d.%m.%Y %H:%M')
             except:
                 created_at = ''
+        elif created_at and isinstance(created_at, datetime):
+            created_at = created_at.strftime('%d.%m.%Y %H:%M')
+        else:
+            created_at = ''
         
         lines.append(f"[{created_at}] {author}: {text}")
     
     return "\n".join(lines)
 
+def get_comments_text_only(comments_df):
+    """Возвращает только тексты комментариев для сравнения (без даты и автора)"""
+    if comments_df.empty:
+        return ""
+    
+    texts = []
+    for _, comment in comments_df.iterrows():
+        text = comment.get('comment', '')
+        if text:
+            texts.append(text.strip())
+    
+    return "\n".join(texts)
+
 def get_comments_dict(df):
-    """Загружает комментарии для всех заявок в DataFrame"""
+    """Загружает отформатированные комментарии для всех заявок"""
     comments_dict = {}
     for _, row in df.iterrows():
         request_id = row['ID']
         comments_df = load_comments(request_id)
         comments_dict[request_id] = format_comments(comments_df)
     return comments_dict
-
-def apply_filters(df, status_filter, dorm_filter=None, type_filter=None, date_filter=None):
-    """Применяет фильтры к DataFrame"""
-    filtered = df.copy()
-    
-    if status_filter and status_filter != "Все":
-        filtered = filtered[filtered["Статус"] == status_filter]
-    
-    if dorm_filter and dorm_filter != "Все":
-        filtered = filtered[filtered["Общежитие"].str.contains(dorm_filter)]
-    
-    if type_filter and type_filter != "Все":
-        filtered = filtered[filtered["Тип заявки"] == type_filter]
-    
-    return filtered
-
-def apply_date_filter(df, date_filter, date_column="Дата"):
-    """Применяет фильтр по дате"""
-    if date_filter == "Все" or not date_filter:
-        return df
-    
-    today = datetime.now().date()
-    filtered = df.copy()
-    
-    if date_filter == "Сегодня":
-        filtered = filtered[filtered[date_column] == today.strftime("%Y-%m-%d")]
-    elif date_filter == "Вчера":
-        yesterday = today - timedelta(days=1)
-        filtered = filtered[filtered[date_column] == yesterday.strftime("%Y-%m-%d")]
-    
-    return filtered
-
-def format_date_for_display(df, date_column="Дата"):
-    """Преобразует дату в формат DD.MM.YYYY"""
-    df = df.copy()
-    df[date_column] = pd.to_datetime(df[date_column]).dt.strftime("%d.%m.%Y")
-    return df
 
 def rename_columns(df):
     """Переименовывает колонки для отображения"""
@@ -283,6 +264,12 @@ def rename_columns(df):
         "description": "Описание",
         "status": "Статус"
     })
+
+def format_date_for_display(df, date_column="Дата"):
+    """Преобразует дату в формат DD.MM.YYYY"""
+    df = df.copy()
+    df[date_column] = pd.to_datetime(df[date_column]).dt.strftime("%d.%m.%Y")
+    return df
 
 def create_column_config():
     """Создает конфигурацию колонок для data_editor"""
@@ -309,6 +296,36 @@ def get_disabled_columns():
     """Возвращает список колонок, которые нельзя редактировать"""
     return ["ID", "Дата", "Время", "ФИО студента", "Email", "Общежитие", "Комната", "Тип заявки", "Описание", "Статус"]
 
+def to_excel(df):
+    """Экспорт данных в Excel"""
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, sheet_name='Заявки')
+        workbook = writer.book
+        worksheet = writer.sheets['Заявки']
+        
+        from openpyxl.styles import Alignment
+        
+        for col in worksheet.columns:
+            max_length = 0
+            column = col[0].column_letter
+            for cell in col:
+                try:
+                    if len(str(cell.value)) > max_length:
+                        max_length = len(str(cell.value))
+                except:
+                    pass
+            adjusted_width = min(max_length + 2, 50)
+            worksheet.column_dimensions[column].width = adjusted_width
+        
+        for row in worksheet.iter_rows():
+            for cell in row:
+                cell.alignment = Alignment(horizontal='left', vertical='center', wrap_text=True)
+        
+        worksheet.freeze_panes = 'A2'
+    
+    return output.getvalue()
+
 # ==================== ОСНОВНЫЕ ФУНКЦИИ ====================
 
 def show_statistics():
@@ -327,6 +344,54 @@ def show_statistics():
     
     stats_df = pd.DataFrame(stats_data)
     st.dataframe(stats_df, use_container_width=True, hide_index=True)
+
+def process_comments_changes(edited_df, edit_df):
+    """Обрабатывает изменения в комментариях"""
+    comments_updated = False
+    
+    for i in range(len(edited_df)):
+        request_id = int(edit_df.loc[i, "ID"])
+        new_comments_text = edited_df.loc[i, "Комментарии"] if i < len(edited_df) else ""
+        
+        # Получаем текущие комментарии из базы (только текст)
+        current_comments_df = load_comments(request_id)
+        current_text = get_comments_text_only(current_comments_df)
+        
+        # Извлекаем только текст из новых комментариев (без даты и автора)
+        new_raw_lines = []
+        if new_comments_text and new_comments_text.strip():
+            for line in new_comments_text.split('\n'):
+                line = line.strip()
+                if line:
+                    # Пытаемся извлечь текст после "]: "
+                    if ']: ' in line:
+                        parts = line.split(']: ', 1)
+                        if len(parts) == 2:
+                            new_raw_lines.append(parts[1].strip())
+                        else:
+                            new_raw_lines.append(line)
+                    else:
+                        new_raw_lines.append(line)
+        
+        new_raw = "\n".join(new_raw_lines)
+        
+        # Сравниваем "сырые" тексты
+        if new_raw != current_text:
+            supabase = get_supabase()
+            
+            # Удаляем все старые комментарии
+            supabase.table('comments').delete().eq('request_id', request_id).execute()
+            
+            # Добавляем новые комментарии
+            if new_raw:
+                for line in new_raw_lines:
+                    if line:
+                        add_comment(request_id, line, author="Заведующий")
+                        comments_updated = True
+            else:
+                comments_updated = True
+    
+    return comments_updated
 
 def show_comments_editor(dormitory, category, df):
     """Отображает таблицу с комментариями для конкретной категории"""
@@ -368,48 +433,12 @@ def show_comments_editor(dormitory, category, df):
     for i in range(len(edited_df)):
         st.session_state[checkbox_key][i] = edited_df.loc[i, "Выбрать"]
     
-    # ---------- ОБРАБОТКА ИЗМЕНЕНИЙ КОММЕНТАРИЕВ (исправленная версия) ----------
-    comments_updated = False
-    
-    for i in range(len(edited_df)):
-        request_id = int(edit_df.loc[i, "ID"])
-        new_comments_text = edited_df.loc[i, "Комментарии"] if i < len(edited_df) else ""
-        
-        # Получаем текущие комментарии из базы ДАННЫХ (не из edit_df!)
-        current_comments_df = load_comments(request_id)
-        current_comments_list = []
-        for _, comment in current_comments_df.iterrows():
-            text = comment.get('comment', '')
-            if text:
-                current_comments_list.append(text)
-        current_text = "\n".join(current_comments_list)
-        
-        # Нормализуем для сравнения (удаляем лишние пробелы в конце строк)
-        new_text_normalized = "\n".join([line.strip() for line in new_comments_text.split('\n') if line.strip()]) if new_comments_text else ""
-        current_text_normalized = "\n".join([line.strip() for line in current_text.split('\n') if line.strip()]) if current_text else ""
-        
-        # Если текст изменился
-        if new_text_normalized != current_text_normalized:
-            supabase = get_supabase()
-            
-            # Удаляем все старые комментарии
-            supabase.table('comments').delete().eq('request_id', request_id).execute()
-            
-            # Добавляем новые комментарии
-            if new_comments_text and new_comments_text.strip():
-                lines = [line.strip() for line in new_comments_text.split('\n') if line.strip()]
-                for line in lines:
-                    if line:
-                        add_comment(request_id, line, author="Заведующий")
-                        comments_updated = True
-            else:
-                comments_updated = True
+    # Обработка изменений комментариев
+    comments_updated = process_comments_changes(edited_df, edit_df)
     
     # Обновляем страницу ТОЛЬКО если были изменения
     if comments_updated:
         st.success("✅ Комментарии обновлены")
-        # Очищаем кэш, чтобы при следующей загрузке были свежие данные
-        st.cache_data.clear()
         time.sleep(0.5)
         st.rerun()
     
@@ -654,47 +683,12 @@ def show_all_requests_with_control():
     for i in range(len(edited_df)):
         st.session_state[checkbox_key][i] = edited_df.loc[i, "Выбрать"]
     
-    # ---------- ОБРАБОТКА ИЗМЕНЕНИЙ КОММЕНТАРИЕВ (исправленная версия) ----------
-    comments_updated = False
-    
-    for i in range(len(edited_df)):
-        request_id = int(edit_df.loc[i, "ID"])
-        new_comments_text = edited_df.loc[i, "Комментарии"] if i < len(edited_df) else ""
-        
-        # Получаем текущие комментарии из базы ДАННЫХ
-        current_comments_df = load_comments(request_id)
-        current_comments_list = []
-        for _, comment in current_comments_df.iterrows():
-            text = comment.get('comment', '')
-            if text:
-                current_comments_list.append(text)
-        current_text = "\n".join(current_comments_list)
-        
-        # Нормализуем для сравнения
-        new_text_normalized = "\n".join([line.strip() for line in new_comments_text.split('\n') if line.strip()]) if new_comments_text else ""
-        current_text_normalized = "\n".join([line.strip() for line in current_text.split('\n') if line.strip()]) if current_text else ""
-        
-        # Если текст изменился
-        if new_text_normalized != current_text_normalized:
-            supabase = get_supabase()
-            
-            # Удаляем все старые комментарии
-            supabase.table('comments').delete().eq('request_id', request_id).execute()
-            
-            # Добавляем новые комментарии
-            if new_comments_text and new_comments_text.strip():
-                lines = [line.strip() for line in new_comments_text.split('\n') if line.strip()]
-                for line in lines:
-                    if line:
-                        add_comment(request_id, line, author="Заведующий")
-                        comments_updated = True
-            else:
-                comments_updated = True
+    # Обработка изменений комментариев
+    comments_updated = process_comments_changes(edited_df, edit_df)
     
     # Обновляем страницу ТОЛЬКО если были изменения
     if comments_updated:
         st.success("✅ Комментарии обновлены")
-        st.cache_data.clear()
         time.sleep(0.5)
         st.rerun()
     
@@ -780,34 +774,6 @@ def show_all_requests_with_control():
         use_container_width=True,
         key="export_all"
     )
-def to_excel(df):
-    output = BytesIO()
-    with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        df.to_excel(writer, index=False, sheet_name='Заявки')
-        workbook = writer.book
-        worksheet = writer.sheets['Заявки']
-        
-        from openpyxl.styles import Alignment
-        
-        for col in worksheet.columns:
-            max_length = 0
-            column = col[0].column_letter
-            for cell in col:
-                try:
-                    if len(str(cell.value)) > max_length:
-                        max_length = len(str(cell.value))
-                except:
-                    pass
-            adjusted_width = min(max_length + 2, 50)
-            worksheet.column_dimensions[column].width = adjusted_width
-        
-        for row in worksheet.iter_rows():
-            for cell in row:
-                cell.alignment = Alignment(horizontal='left', vertical='center', wrap_text=True)
-        
-        worksheet.freeze_panes = 'A2'
-    
-    return output.getvalue()
 
 # ==================== ОСНОВНАЯ ФУНКЦИЯ ====================
 
@@ -822,8 +788,7 @@ def main():
     if "show_all_requests" not in st.session_state:
         st.session_state.show_all_requests = False
     if "show_bulk_delete_confirm_all" not in st.session_state:
-        st.session_state.show_bulk_delete_confirm_all = False
-    if "bulk_delete_ids_all" not in st.session_state:
+        st.session_state.show_bulk_delete_confirm_all = False    if "bulk_delete_ids_all" not in st.session_state:
         st.session_state.bulk_delete_ids_all = []
     
     st.title("🔐 Панель сотрудника ЖБУ | Управление электронными заявками")
