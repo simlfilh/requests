@@ -79,7 +79,7 @@ USERS = {
     },
     "4293": {
         "username": "4293",
-        "password": hashlib.sha256(st.secrets["PASSWORD_HEAD_42"].encode()).hexdigest(),
+        "password": hashlib.sha256(st.secrets["PASSWORD_HEAD_44"].encode()).hexdigest(),
         "role": "head",
         "name": "Гунько Валентина Шахиевна",
         "dormitory": "Общежитие №4 | наб. канала Грибоедова, д. 30-32, лит. Б"
