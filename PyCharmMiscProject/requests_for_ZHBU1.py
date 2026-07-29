@@ -549,7 +549,6 @@ def show_comments_for_request(request_id, user_role, username):
             st.warning("⚠️ Введите текст комментария")
             
 def show_dormitory_requests_with_control(dormitory, user_role, user_name, username):
-    """Обновленная функция с передачей username"""
     df = load_requests_by_dormitory(dormitory)
     
     if df.empty:
@@ -615,14 +614,26 @@ def show_dormitory_requests_with_control(dormitory, user_role, user_name, userna
     
     st.markdown("---")
     
-    types_to_show = [
-        "🔧 Сантехника",
-        "⚡ Электрика",
-        "🔨 Плотник",
-        "🍵 Плиты",
-        "🧹 Уборка",
-        "❓ Вопрос / Другое"
-    ]
+    # ============ ИЗМЕНЕННАЯ ЧАСТЬ ============
+    # Определяем типы заявок в зависимости от общежития
+    if dormitory and "Общежитие №2" in dormitory:
+        types_to_show = [
+            "🔧 Сантехника",
+            "⚡ Электрика",
+            "🔨 Плотник",
+            # "🍵 Плиты",  # Убрано для общежития №2
+            "🧹 Уборка",
+            "❓ Вопрос / Другое"
+        ]
+    else:
+        types_to_show = [
+            "🔧 Сантехника",
+            "⚡ Электрика",
+            "🔨 Плотник",
+            "🍵 Плиты",
+            "🧹 Уборка",
+            "❓ Вопрос / Другое"
+        ]
     
     for category in types_to_show:
         st.subheader(category)
