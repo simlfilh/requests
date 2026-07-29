@@ -37,9 +37,16 @@ USERS = {
     # Заведующие (5 человек)
     "4295": {
         "username": "4295",
-        "password": hashlib.sha256(st.secrets["PASSWORD_HEAD_2"].encode()).hexdigest(),
+        "password": hashlib.sha256(st.secrets["PASSWORD_HEAD_21"].encode()).hexdigest(),
         "role": "head",
         "name": "Беззубова Зоя Николаевна ",
+        "dormitory": "Общежитие №2 | Чкаловский пр-т, д. 27"
+    },
+    "4298": {
+        "username": "4298",
+        "password": hashlib.sha256(st.secrets["PASSWORD_HEAD_22"].encode()).hexdigest(),
+        "role": "head",
+        "name": "Ульянова Наталия Петровна",
         "dormitory": "Общежитие №2 | Чкаловский пр-т, д. 27"
     },
     "1132": {
@@ -64,14 +71,14 @@ USERS = {
         "dormitory": "Общежитие №4 | ул. Воронежская, д. 69"
     },
     "4947": {
-        "username": "4938",
+        "username": "4947",
         "password": hashlib.sha256(st.secrets["PASSWORD_HEAD_42"].encode()).hexdigest(),
         "role": "head",
         "name": "Ерофеева Ангелина Олеговна",
         "dormitory": "Общежитие №4 | ул. Воронежская, д. 69"
     },
     "4951": {
-        "username": "4938",
+        "username": "49",
         "password": hashlib.sha256(st.secrets["PASSWORD_HEAD_43"].encode()).hexdigest(),
         "role": "head",
         "name": "Цыбырна Ольга",
