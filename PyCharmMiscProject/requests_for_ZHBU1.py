@@ -909,6 +909,9 @@ def main():
             st.session_state.user = None
             st.session_state.username = None
             st.rerun()
+        
+        st.link_button("📝 Оставить заявку сотруднику", "https://requestsunecondorms.streamlit.app/", use_container_width=True)
+
     
     st.divider()
     
