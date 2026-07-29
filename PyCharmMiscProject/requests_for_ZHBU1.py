@@ -44,9 +44,16 @@ USERS = {
     },
     "1132": {
         "username": "1132",
-        "password": hashlib.sha256(st.secrets["PASSWORD_HEAD_3"].encode()).hexdigest(),
+        "password": hashlib.sha256(st.secrets["PASSWORD_HEAD_31"].encode()).hexdigest(),
         "role": "head",
         "name": "Васильев Александр Владимирович",
+        "dormitory": "Общежитие №3 | пр-т Косыгина, д. 19, к. 2"
+    },
+    "1132": {
+        "username": "1132",
+        "password": hashlib.sha256(st.secrets["PASSWORD_HEAD_32"].encode()).hexdigest(),
+        "role": "head",
+        "name": "Хижняк Наталья Сергеевна",
         "dormitory": "Общежитие №3 | пр-т Косыгина, д. 19, к. 2"
     },
     "4938": {
@@ -54,6 +61,20 @@ USERS = {
         "password": hashlib.sha256(st.secrets["PASSWORD_HEAD_41"].encode()).hexdigest(),
         "role": "head",
         "name": "Бровкина Наталья Анатольевна",
+        "dormitory": "Общежитие №4 | ул. Воронежская, д. 69"
+    },
+    "4947": {
+        "username": "4938",
+        "password": hashlib.sha256(st.secrets["PASSWORD_HEAD_42"].encode()).hexdigest(),
+        "role": "head",
+        "name": "Ерофеева Ангелина Олеговна",
+        "dormitory": "Общежитие №4 | ул. Воронежская, д. 69"
+    },
+    "4951": {
+        "username": "4938",
+        "password": hashlib.sha256(st.secrets["PASSWORD_HEAD_43"].encode()).hexdigest(),
+        "role": "head",
+        "name": "Цыбырна Ольга",
         "dormitory": "Общежитие №4 | ул. Воронежская, д. 69"
     },
     "4293": {
