@@ -668,7 +668,7 @@ def show_dormitory_requests_with_control(dormitory, user_role, user_name, userna
         
         edit_df.insert(0, "Выбрать", checkbox_values)
         
-        columns_to_show = ["Выбрать", "ID", "Дата", "ФИО студента", "Общежитие", "Комната", "Тип заявки", "Описание", "Статус", "Комментарии"]
+        columns_to_show = ["Выбрать", "№", "Дата", "ФИО студента", "Комната", "Описание", "Статус", "Комментарии"]
         display_columns = [col for col in columns_to_show if col in edit_df.columns]
         edit_df_display = edit_df[display_columns]
         
