@@ -503,8 +503,6 @@ def main():
                                 st.error("❌ Не удалось подтвердить ни одну заявку")
                                 for err in error_messages:
                                     st.error(f"❌ {err}")
-                    else:
-                        st.warning("⚠️ Выберите заявки для подтверждения")
                 
         elif view_email:
             st.error("Введите корректный email")
