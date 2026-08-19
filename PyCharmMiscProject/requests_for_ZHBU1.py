@@ -397,13 +397,32 @@ def send_status_notification(student_email, student_name, request_id, new_status
         print(f"Ошибка отправки: {e}")
         return False
 
-def to_excel(df):
+def to_excel(df, dormitory=None, request_type=None):
     output = BytesIO()
     
-    # Создаем копию DataFrame без столбца is_anonymous (если он существует)
+    # Создаем копию DataFrame
     df_to_export = df.copy()
+    
+    # Удаляем ненужные столбцы
+    columns_to_drop = []
     if 'is_anonymous' in df_to_export.columns:
-        df_to_export = df_to_export.drop(columns=['is_anonymous'])
+        columns_to_drop.append('is_anonymous')
+    if 'ID' in df_to_export.columns:
+        columns_to_drop.append('ID')
+    if 'Время' in df_to_export.columns:
+        columns_to_drop.append('Время')
+    # Также удаляем столбец "Комментарии" если он есть (он не нужен в Excel)
+    if 'Комментарии' in df_to_export.columns:
+        columns_to_drop.append('Комментарии')
+    
+    if columns_to_drop:
+        df_to_export = df_to_export.drop(columns=columns_to_drop)
+    
+    # Для общежития №2 и типа "Сантехника" удаляем столбец "Комната" (опционально)
+    if dormitory and request_type:
+        if "Общежитие №2" in dormitory and "Сантехника" in request_type:
+            if 'Комната' in df_to_export.columns:
+                df_to_export = df_to_export.drop(columns=['Комната'])
     
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
         df_to_export.to_excel(writer, index=False, sheet_name='Заявки')
@@ -420,13 +439,11 @@ def to_excel(df):
             for cell in column:
                 try:
                     if cell.value:
-                        # Проверяем длину содержимого
                         text_length = len(str(cell.value))
                         if text_length > max_length:
                             max_length = text_length
                 except:
                     pass
-            # Устанавливаем ширину с запасом, но не более 60 символов
             adjusted_width = min(max_length + 2, 60)
             worksheet.column_dimensions[column_letter].width = adjusted_width
         
