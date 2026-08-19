@@ -370,7 +370,7 @@ def main():
                     try:
                         # Если заявка подтверждена, показываем соответствующий статус
                         if row.get('completed_confirmed', False):
-                            return "✅ Выполнена (подтверждено)"
+                            return "Выполнена (подтверждено)"
                         # Иначе показываем текущий статус
                         return row['Статус']
                     except:
@@ -473,56 +473,39 @@ def main():
                                 st.error("❌ Ошибка при удалении")
                         else:
                             st.warning("⚠️ Выберите заявки для удаления")
-                
-                # Кнопка подтверждения выполнения
-                st.markdown("---")
-                st.subheader("✅ Подтверждение выполнения")
-                st.info("💡 Подтвердите выполнение заявки. Статус изменится на 'Выполнена ✅'")
-                
-                # Проверяем, есть ли уже подтвержденные заявки среди выбранных
-                already_confirmed = []
-                for id in selected_ids:
-                    for _, row in edit_df.iterrows():
-                        if row['ID'] == id and row.get('completed_confirmed', False):
-                            already_confirmed.append(id)
-                
-                if already_confirmed:
-                    st.warning(f"⚠️ Заявки №{', '.join(map(str, already_confirmed))} уже подтверждены")
-                
-                if st.button("✅ Подтвердить выполнение выбранных", use_container_width=True, key="confirm_selected_student"):
-                    if selected_ids:
-                        success_count = 0
-                        failed_ids = []
-                        error_messages = []
-                        
-                        for id in selected_ids:
-                            success, message = confirm_completion(id, view_email)
-                            if success:
-                                success_count += 1
+
+                    if st.button("✅ Подтвердить выполнение выбранных заявок", use_container_width=True, key="confirm_selected_student"):
+                        if selected_ids:
+                            success_count = 0
+                            failed_ids = []
+                            error_messages = []
+                            
+                            for id in selected_ids:
+                                success, message = confirm_completion(id, view_email)
+                                if success:
+                                    success_count += 1
+                                else:
+                                    failed_ids.append(id)
+                                    error_messages.append(f"Заявка №{id}: {message}")
+                            
+                            if success_count > 0:
+                                st.success(f"✅ Подтверждено заявок: {success_count}")
+                                if failed_ids:
+                                    st.error(f"❌ Не удалось подтвердить заявки: {', '.join(map(str, failed_ids))}")
+                                    # Показываем подробные ошибки
+                                    for err in error_messages:
+                                        st.error(f"❌ {err}")
+                                for i in range(len(edit_df)):
+                                    st.session_state[checkbox_key][i] = False
+                                st.rerun()
                             else:
-                                failed_ids.append(id)
-                                error_messages.append(f"Заявка №{id}: {message}")
-                        
-                        if success_count > 0:
-                            st.success(f"✅ Подтверждено заявок: {success_count}")
-                            if failed_ids:
-                                st.error(f"❌ Не удалось подтвердить заявки: {', '.join(map(str, failed_ids))}")
-                                # Показываем подробные ошибки
+                                # Если ни одна не подтвердилась, показываем все ошибки
+                                st.error("❌ Не удалось подтвердить ни одну заявку")
                                 for err in error_messages:
                                     st.error(f"❌ {err}")
-                            for i in range(len(edit_df)):
-                                st.session_state[checkbox_key][i] = False
-                            st.rerun()
-                        else:
-                            # Если ни одна не подтвердилась, показываем все ошибки
-                            st.error("❌ Не удалось подтвердить ни одну заявку")
-                            for err in error_messages:
-                                st.error(f"❌ {err}")
                     else:
                         st.warning("⚠️ Выберите заявки для подтверждения")
                 
-            else:
-                st.warning("Заявки не найдены")
         elif view_email:
             st.error("Введите корректный email")
         else:
