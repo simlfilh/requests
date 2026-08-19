@@ -414,6 +414,11 @@ def to_excel(df, dormitory=None, request_type=None):
     # Также удаляем столбец "Комментарии" если он есть (он не нужен в Excel)
     if 'Комментарии' in df_to_export.columns:
         columns_to_drop.append('Комментарии')
+
+    if 'created_at' in df_to_export.columns:
+        columns_to_drop.append('created_at')
+    if 'created_by' in df_to_export.columns:
+        columns_to_drop.append('created_by')
     
     if columns_to_drop:
         df_to_export = df_to_export.drop(columns=columns_to_drop)
