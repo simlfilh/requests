@@ -411,10 +411,8 @@ def to_excel(df, dormitory=None, request_type=None):
         columns_to_drop.append('ID')
     if 'Время' in df_to_export.columns:
         columns_to_drop.append('Время')
-    # Также удаляем столбец "Комментарии" если он есть (он не нужен в Excel)
     if 'Комментарии' in df_to_export.columns:
         columns_to_drop.append('Комментарии')
-
     if 'created_at' in df_to_export.columns:
         columns_to_drop.append('created_at')
     if 'created_by' in df_to_export.columns:
@@ -425,7 +423,7 @@ def to_excel(df, dormitory=None, request_type=None):
     
     # Для общежития №2 и №7 с типом "Сантехника" удаляем столбец "Комната"
     if dormitory and request_type:
-        if ("Общежитие №2" in dormitory or "Общежитие №7" in dormitory) and request_type == "🔧 Сантехника":
+        if ("Общежитие №2" in dormitory or "Общежитие №7" in dormitory) and "Сантехника" in request_type:
             if 'Комната' in df_to_export.columns:
                 df_to_export = df_to_export.drop(columns=['Комната'])
     
@@ -437,7 +435,6 @@ def to_excel(df, dormitory=None, request_type=None):
         
         from openpyxl.styles import Alignment
         
-        # Автоматически определяем ширину столбцов
         for column in worksheet.columns:
             max_length = 0
             column_letter = column[0].column_letter
@@ -452,7 +449,6 @@ def to_excel(df, dormitory=None, request_type=None):
             adjusted_width = min(max_length + 2, 60)
             worksheet.column_dimensions[column_letter].width = adjusted_width
         
-        # Автоматическая высота строк для всех столбцов
         for row_idx in range(2, worksheet.max_row + 1):
             max_height = 25
             for col_letter in worksheet.column_dimensions:
@@ -467,7 +463,6 @@ def to_excel(df, dormitory=None, request_type=None):
                         max_height = min(height_needed, 150)
             worksheet.row_dimensions[row_idx].height = max_height
         
-        # Выравнивание для всех ячеек
         for row in worksheet.iter_rows():
             for cell in row:
                 cell.alignment = Alignment(
@@ -845,7 +840,7 @@ def show_dormitory_requests_with_control(dormitory, user_role, user_name, userna
                 else:
                     st.error("❌ Ошибка при обновлении статусов")
                     
-            excel_data = to_excel(cat_df_with_comments)
+            excel_data = to_excel(cat_df_with_comments, dormitory, category)
             st.download_button(
                 label=f"📊 Скачать в Excel формате",
                 data=excel_data,
