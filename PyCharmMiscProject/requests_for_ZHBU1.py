@@ -425,7 +425,7 @@ def to_excel(df, dormitory=None, request_type=None):
     
     # Для общежития №2 и №7 с типом "Сантехника" удаляем столбец "Комната"
     if dormitory and request_type:
-        if ("Общежитие №2" in dormitory or "Общежитие №7" in dormitory) and "Сантехника" in request_type:
+        if ("Общежитие №2" in dormitory or "Общежитие №7" in dormitory) and request_type == "🔧 Сантехника":
             if 'Комната' in df_to_export.columns:
                 df_to_export = df_to_export.drop(columns=['Комната'])
     
