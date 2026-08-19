@@ -582,7 +582,7 @@ def show_dormitory_requests_with_control(dormitory, user_role, user_name, userna
     st.subheader("🔍 Фильтры")
     col1, col2 = st.columns(2)
     with col1:
-        status_filter = st.selectbox("Статус", ["Все", "Новая", "В работе", "Выполнена"], key=f"status_{dormitory}")
+        status_filter = st.selectbox("Статус", ["Все", "Новая", "В работе", "Выполнена", "Выполнена (подтверждено)"], key=f"status_{dormitory}")
     with col2:
         date_options = ["Все", "Сегодня", "Вчера", "Выбрать дату", "Выбрать период"]
         date_filter = st.selectbox("Период", date_options, key=f"date_{dormitory}")
@@ -1086,7 +1086,7 @@ def show_all_requests_with_control(username):
     
     col1, col2, col3, col4 = st.columns(4)
     with col1:
-        status_filter_all = st.selectbox("Статус", ["Все", "Новая", "В работе", "Выполнена"], key="status_all")
+        status_filter_all = st.selectbox("Статус", ["Все", "Новая", "В работе", "Выполнена", "Выполнена (подтверждено)"], key="status_all")
     with col2:
         dorm_filter_all = st.selectbox("Общежитие", ["Все"] + [d.split('|')[0].strip() for d in DORMITORIES], key="dorm_all_filter")
     with col3:
