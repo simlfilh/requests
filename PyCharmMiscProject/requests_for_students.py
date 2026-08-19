@@ -81,6 +81,8 @@ def get_user_requests(email):
 def confirm_completion(request_id, email):
     try:
         supabase = get_supabase()
+        
+        # Проверяем, что заявка существует и принадлежит студенту
         result = supabase.table('requests').select('*').eq('id', request_id).eq('email', email).execute()
         
         if not result.data:
@@ -93,11 +95,16 @@ def confirm_completion(request_id, email):
             return False, "Заявка уже подтверждена как выполненная"
         
         # Обновляем статус на "Выполнена" и подтверждаем
-        supabase.table('requests').update({
+        update_result = supabase.table('requests').update({
             'completed_confirmed': True,
             'status': "Выполнена ✅"
         }).eq('id', request_id).execute()
         
+        # Проверяем, что обновление прошло успешно
+        if not update_result.data:
+            return False, "Ошибка при обновлении статуса заявки"
+        
+        # Отправляем уведомление сотрудникам
         notify_workers_about_confirmation(request, email)
         
         return True, "✅ Заявка успешно подтверждена!"
@@ -349,8 +356,10 @@ def main():
                 # Форматируем статус с учетом подтверждения
                 def format_status(row):
                     try:
+                        # Если заявка подтверждена, показываем соответствующий статус
                         if row.get('completed_confirmed', False):
                             return "✅ Выполнена (подтверждено)"
+                        # Иначе показываем текущий статус
                         return row['Статус']
                     except:
                         return row['Статус']
@@ -452,30 +461,47 @@ def main():
                                 st.error("❌ Ошибка при удалении")
                         else:
                             st.warning("⚠️ Выберите заявки для удаления")
-
-                    if st.button("✅ Подтвердить выполнение выбранных", use_container_width=True, key="confirm_selected_student"):
-                        if selected_ids:
-                            success_count = 0
-                            failed_ids = []
-                            for id in selected_ids:
-                                success, message = confirm_completion(id, view_email)
-                                if success:
-                                    success_count += 1
-                                else:
-                                    failed_ids.append(id)
-                            
-                            if success_count > 0:
-                                st.success(f"✅ Подтверждено заявок: {success_count}")
-                                if failed_ids:
-                                    st.warning(f"⚠️ Не удалось подтвердить заявки: {', '.join(map(str, failed_ids))}")
-                                for i in range(len(edit_df)):
-                                    st.session_state[checkbox_key][i] = False
-                                st.rerun()
-                            else:
-                                st.error("❌ Ошибка при подтверждении заявок")
-                        else:
-                            st.warning("⚠️ Выберите заявки для подтверждения")
                 
+                # Кнопка подтверждения выполнения
+                st.markdown("---")
+                st.subheader("✅ Подтверждение выполнения")
+                st.info("💡 Подтвердите выполнение заявки. Статус изменится на 'Выполнена ✅'")
+                
+                # Проверяем, есть ли уже подтвержденные заявки среди выбранных
+                already_confirmed = []
+                for id in selected_ids:
+                    for _, row in edit_df.iterrows():
+                        if row['ID'] == id and row.get('completed_confirmed', False):
+                            already_confirmed.append(id)
+                
+                if already_confirmed:
+                    st.warning(f"⚠️ Заявки №{', '.join(map(str, already_confirmed))} уже подтверждены")
+                
+                if st.button("✅ Подтвердить выполнение выбранных", use_container_width=True, key="confirm_selected_student"):
+                    if selected_ids:
+                        success_count = 0
+                        failed_ids = []
+                        for id in selected_ids:
+                            success, message = confirm_completion(id, view_email)
+                            if success:
+                                success_count += 1
+                            else:
+                                failed_ids.append(id)
+                        
+                        if success_count > 0:
+                            st.success(f"✅ Подтверждено заявок: {success_count}")
+                            if failed_ids:
+                                st.warning(f"⚠️ Не удалось подтвердить заявки: {', '.join(map(str, failed_ids))}")
+                            for i in range(len(edit_df)):
+                                st.session_state[checkbox_key][i] = False
+                            st.rerun()
+                        else:
+                            st.error("❌ Ошибка при подтверждении заявок")
+                    else:
+                        st.warning("⚠️ Выберите заявки для подтверждения")
+                
+            else:
+                st.warning("Заявки не найдены")
         elif view_email:
             st.error("Введите корректный email")
         else:
