@@ -94,22 +94,34 @@ def confirm_completion(request_id, email):
         if request.get('completed_confirmed', False):
             return False, "Заявка уже подтверждена как выполненная"
         
-        # Обновляем статус на "Выполнена" и подтверждаем
-        update_result = supabase.table('requests').update({
-            'completed_confirmed': True,
-            'status': "Выполнена ✅"
-        }).eq('id', request_id).execute()
-        
-        # Проверяем, что обновление прошло успешно
-        if not update_result.data:
-            return False, "Ошибка при обновлении статуса заявки"
+        # Пробуем обновить статус
+        try:
+            update_result = supabase.table('requests').update({
+                'completed_confirmed': True,
+                'status': "Выполнена ✅"
+            }).eq('id', request_id).execute()
+            
+            # Проверяем результат обновления
+            if not update_result.data:
+                return False, f"Ошибка при обновлении: сервер вернул пустой ответ"
+                
+        except Exception as update_error:
+            return False, f"Ошибка при обновлении статуса: {str(update_error)}"
         
         # Отправляем уведомление сотрудникам
-        notify_workers_about_confirmation(request, email)
+        try:
+            notify_workers_about_confirmation(request, email)
+        except Exception as notify_error:
+            # Даже если уведомление не отправилось, заявка подтверждена
+            print(f"Ошибка при отправке уведомления: {notify_error}")
         
         return True, "✅ Заявка успешно подтверждена!"
+        
     except Exception as e:
-        return False, f"Ошибка: {str(e)}"
+        # Выводим полную ошибку
+        error_msg = f"Ошибка: {str(e)}"
+        print(f"DEBUG: {error_msg}")
+        return False, error_msg
 
 def notify_workers_about_confirmation(request, student_email):
     subject = f"✅ Заявка №{request['id']} подтверждена студентом"
@@ -481,22 +493,31 @@ def main():
                     if selected_ids:
                         success_count = 0
                         failed_ids = []
+                        error_messages = []
+                        
                         for id in selected_ids:
                             success, message = confirm_completion(id, view_email)
                             if success:
                                 success_count += 1
                             else:
                                 failed_ids.append(id)
+                                error_messages.append(f"Заявка №{id}: {message}")
                         
                         if success_count > 0:
                             st.success(f"✅ Подтверждено заявок: {success_count}")
                             if failed_ids:
-                                st.warning(f"⚠️ Не удалось подтвердить заявки: {', '.join(map(str, failed_ids))}")
+                                st.error(f"❌ Не удалось подтвердить заявки: {', '.join(map(str, failed_ids))}")
+                                # Показываем подробные ошибки
+                                for err in error_messages:
+                                    st.error(f"❌ {err}")
                             for i in range(len(edit_df)):
                                 st.session_state[checkbox_key][i] = False
                             st.rerun()
                         else:
-                            st.error("❌ Ошибка при подтверждении заявок")
+                            # Если ни одна не подтвердилась, показываем все ошибки
+                            st.error("❌ Не удалось подтвердить ни одну заявку")
+                            for err in error_messages:
+                                st.error(f"❌ {err}")
                     else:
                         st.warning("⚠️ Выберите заявки для подтверждения")
                 
