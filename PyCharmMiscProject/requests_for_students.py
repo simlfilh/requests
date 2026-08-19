@@ -206,10 +206,173 @@ def validate_email(email):
     pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
     return re.match(pattern, email) is not None
 
+def show_student_requests(email):
+    """Отображение заявок студента в стиле админ-панели"""
+    
+    # Загружаем заявки студента
+    user_requests = get_user_requests(email)
+    
+    if not user_requests:
+        st.info("У вас пока нет заявок")
+        return
+    
+    # Преобразуем в DataFrame
+    df = pd.DataFrame(user_requests)
+    
+    # Переименовываем колонки
+    display_df = df.rename(columns={
+        "id": "ID",
+        "date": "Дата",
+        "time": "Время",
+        "fio": "ФИО",
+        "email": "Email",
+        "dormitory": "Общежитие",
+        "room": "Комната",
+        "type": "Тип заявки",
+        "description": "Описание",
+        "status": "Статус"
+    })
+    
+    # Добавляем статус с подтверждением
+    def format_status(row):
+        if row['status'] == "Выполнена" and row.get('completed_confirmed', False):
+            return "✅ Выполнена (подтверждено)"
+        return row['status']
+    
+    display_df["Статус"] = display_df.apply(format_status, axis=1)
+    
+    # Фильтры
+    st.subheader("🔍 Фильтры")
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        status_filter = st.selectbox("Статус", ["Все", "Новая", "В работе", "Выполнена", "Выполнена (подтверждено)"], key="status_filter")
+    with col2:
+        type_filter = st.selectbox("Тип заявки", ["Все", "🔧 Сантехника", "⚡ Электрика", "🔨 Плотник", "🍵 Плиты", "🧹 Уборка", "❓ Вопрос / Другое"], key="type_filter")
+    with col3:
+        date_filter = st.selectbox("Период", ["Все", "Сегодня", "Вчера", "Последние 7 дней", "Последние 30 дней"], key="date_filter")
+    
+    # Применяем фильтры
+    filtered_df = display_df.copy()
+    
+    if status_filter != "Все":
+        filtered_df = filtered_df[filtered_df["Статус"] == status_filter]
+    
+    if type_filter != "Все":
+        filtered_df = filtered_df[filtered_df["Тип заявки"] == type_filter]
+    
+    today = datetime.now().date()
+    if date_filter == "Сегодня":
+        filtered_df = filtered_df[pd.to_datetime(filtered_df["Дата"]).dt.date == today]
+    elif date_filter == "Вчера":
+        yesterday = today - timedelta(days=1)
+        filtered_df = filtered_df[pd.to_datetime(filtered_df["Дата"]).dt.date == yesterday]
+    elif date_filter == "Последние 7 дней":
+        week_ago = today - timedelta(days=7)
+        filtered_df = filtered_df[pd.to_datetime(filtered_df["Дата"]).dt.date >= week_ago]
+    elif date_filter == "Последние 30 дней":
+        month_ago = today - timedelta(days=30)
+        filtered_df = filtered_df[pd.to_datetime(filtered_df["Дата"]).dt.date >= month_ago]
+    
+    # Форматируем дату
+    filtered_df["Дата"] = pd.to_datetime(filtered_df["Дата"]).dt.strftime("%d.%m.%Y")
+    
+    # Показываем метрики
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.metric("Всего", len(filtered_df))
+    with col2:
+        st.metric("Новых", len(filtered_df[filtered_df["Статус"] == "Новая"]))
+    with col3:
+        st.metric("В работе", len(filtered_df[filtered_df["Статус"] == "В работе"]))
+    with col4:
+        st.metric("Выполнено", len(filtered_df[filtered_df["Статус"].str.contains("Выполнена", na=False)]))
+    
+    st.markdown("---")
+    
+    if not filtered_df.empty:
+        # Отображаем таблицу с кнопками
+        st.subheader("📋 Мои заявки")
+        
+        # Создаем копию для отображения
+        display_cols = ["ID", "Дата", "Время", "Тип заявки", "Общежитие", "Комната", "Описание", "Статус"]
+        df_display = filtered_df[display_cols].copy()
+        
+        # Показываем таблицу
+        st.dataframe(df_display, use_container_width=True, hide_index=True)
+        
+        # Секция подтверждения выполнения
+        st.markdown("---")
+        st.subheader("✅ Подтверждение выполнения заявки")
+        
+        # Находим заявки со статусом "Выполнена" и без подтверждения
+        completed_requests = []
+        for _, row in filtered_df.iterrows():
+            if row["Статус"] == "Выполнена" and not row.get('completed_confirmed', False):
+                completed_requests.append(row)
+        
+        if completed_requests:
+            st.success(f"Найдено {len(completed_requests)} выполненных заявок, которые можно подтвердить")
+            
+            for req in completed_requests:
+                with st.container():
+                    col1, col2 = st.columns([4, 1])
+                    with col1:
+                        st.markdown(f"""
+                        **Заявка №{req['ID']}**  
+                        📋 Тип: {req['Тип заявки']}  
+                        🏠 {req['Общежитие']}  
+                        📝 Описание: {req['Описание'][:100]}...
+                        """)
+                    with col2:
+                        if st.button(f"✅ Подтвердить", key=f"confirm_{req['ID']}"):
+                            success, message = confirm_completion(req['ID'], email)
+                            if success:
+                                st.success(f"✅ {message}")
+                                st.rerun()
+                            else:
+                                st.error(f"❌ {message}")
+                    st.markdown("---")
+        else:
+            st.info("Нет заявок, требующих подтверждения")
+        
+        # Показываем уже подтвержденные заявки
+        confirmed_requests = filtered_df[filtered_df["Статус"] == "✅ Выполнена (подтверждено)"]
+        if not confirmed_requests.empty:
+            st.markdown("---")
+            st.subheader("✅ Подтвержденные заявки")
+            for _, req in confirmed_requests.iterrows():
+                st.info(f"Заявка №{req['ID']} - {req['Тип заявки']} - ✅ Подтверждена")
+        
+        # Кнопка удаления заявки
+        st.markdown("---")
+        st.subheader("🗑️ Удаление заявки")
+        
+        col1, col2 = st.columns([2, 1])
+        with col1:
+            delete_id = st.number_input("Введите номер заявки для удаления", min_value=1, step=1, key="delete_id_input")
+        with col2:
+            if st.button("🗑️ Удалить заявку", key="delete_btn", use_container_width=True):
+                if delete_id:
+                    success, message = delete_request(delete_id, email)
+                    if success:
+                        st.success(f"✅ {message}")
+                        # Уведомляем сотрудников
+                        notification_body = f"Заявка №{delete_id} была удалена студентом {email}"
+                        for worker_email in WORKER_EMAILS:
+                            send_email(worker_email, f"🗑️ Заявка №{delete_id} удалена студентом", notification_body)
+                        st.rerun()
+                    else:
+                        st.error(f"❌ {message}")
+                else:
+                    st.warning("⚠️ Введите номер заявки")
+    
+    else:
+        st.info("Нет заявок, соответствующих выбранным фильтрам")
+
 def main():
     st.title("🏠 ЖБУ СПбГЭУ | Электронные заявки")
 
-    tab1, tab2 = st.tabs(["📝 Создать заявку", "🗑️ Управление заявками"])
+    tab1, tab2 = st.tabs(["📝 Создать заявку", "📋 Мои заявки"])
 
     with tab1:
         st.markdown("Заполните форму ниже, чтобы оставить заявку на ремонт.")
@@ -301,7 +464,7 @@ def main():
 
                             if is_anonymous:
                                 st.success(f"✅ Анонимная заявка №{new_id} успешно отправлена!")
-                                st.info("ℹ️ Вы не указали ФИО и Email, поэтому уведомления не будут отправлены. Статус заявки можно проверить в разделе 'Управление заявками'.")
+                                st.info("ℹ️ Вы не указали ФИО и Email, поэтому уведомления не будут отправлены. Статус заявки можно проверить в разделе 'Мои заявки'.")
                             else:
                                 if email and validate_email(email):
                                     st.success(f"✅ Заявка №{new_id} успешно отправлена! Подтверждение придет на вашу почту.")
@@ -313,87 +476,19 @@ def main():
                         st.error(f"❌ Ошибка: {e}")
 
     with tab2:
-        st.markdown("### Управление заявками")
+        st.markdown("### 📋 Управление моими заявками")
         
-        st.info("""
-        💡 **Как подтвердить выполнение заявки:**
-        1. Введите ваш email и нажмите "Показать мои заявки"
-        2. Найдите заявку со статусом "Выполнена"
-        3. Нажмите кнопку "✅ Подтвердить выполнение"
-        """)
+        # Ввод email для просмотра заявок
+        view_email = st.text_input("Введите ваш email для просмотра заявок", 
+                                  placeholder="example@mail.ru",
+                                  help="Введите email, который вы указывали при создании заявки")
         
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            delete_email = st.text_input("Ваш email", key="delete_email")
-
-            if st.button("🔍 Показать мои заявки", key="show_requests"):
-                if delete_email and validate_email(delete_email):
-                    user_requests = get_user_requests(delete_email)
-                    if user_requests:
-                        st.success(f"Найдено {len(user_requests)} заявок")
-
-                        df = pd.DataFrame(user_requests)
-                        df_display = df[['id', 'date', 'time', 'type', 'dormitory', 'room', 'status', 'description']]
-                        df_display.columns = ['ID', 'Дата', 'Время', 'Тип', 'Общежитие', 'Комната', 'Статус', 'Описание']
-                        st.dataframe(df_display, use_container_width=True, hide_index=True)
-                        
-                        st.markdown("---")
-                        st.subheader("✅ Подтверждение выполнения заявки")
-                        
-                        completed_requests = [r for r in user_requests if r['status'] == "Выполнена" and not r.get('completed_confirmed', False)]
-                        
-                        if completed_requests:
-                            st.success(f"Найдено {len(completed_requests)} выполненных заявок, которые можно подтвердить")
-                            
-                            for req in completed_requests:
-                                col_btn1, col_btn2 = st.columns([3, 1])
-                                with col_btn1:
-                                    st.markdown(f"**Заявка №{req['id']}** - {req['type']} - {req['dormitory']}")
-                                with col_btn2:
-                                    if st.button(f"✅ Подтвердить №{req['id']}", key=f"confirm_{req['id']}"):
-                                        success, message = confirm_completion(req['id'], delete_email)
-                                        if success:
-                                            st.success(f"✅ {message}")
-                                            st.rerun()
-                                        else:
-                                            st.error(f"❌ {message}")
-                        else:
-                            st.info("Нет выполненных заявок, требующих подтверждения")
-                        
-                        confirmed_requests = [r for r in user_requests if r.get('completed_confirmed', False)]
-                        if confirmed_requests:
-                            st.markdown("---")
-                            st.subheader("✅ Подтвержденные заявки")
-                            for req in confirmed_requests:
-                                st.info(f"Заявка №{req['id']} - ✅ Выполнена (подтверждено)")
-                    else:
-                        st.warning("Заявки не найдены")
-                else:
-                    st.error("Введите корректный email")
-        
-        with col2:
-            delete_request_id = st.text_input("Номер заявки для удаления", key="delete_id")
-
-            if st.button("🗑️ Удалить заявку", key="delete_button"):
-                if delete_email and delete_request_id:
-                    if not validate_email(delete_email):
-                        st.error("❌ Неверный формат email")
-                    else:
-                        try:
-                            request_id_int = int(delete_request_id)
-                            success, message = delete_request(request_id_int, delete_email)
-                            if success:
-                                st.success(f"✅ {message}")
-                                notification_body = f"Заявка №{request_id_int} была удалена пользователем {delete_email}"
-                                for worker_email in WORKER_EMAILS:
-                                    send_email(worker_email, f"🗑️ Заявка №{request_id_int} удалена", notification_body)
-                            else:
-                                st.error(f"❌ {message}")
-                        except ValueError:
-                            st.error("❌ ID заявки должен быть числом")
-                else:
-                    st.error("❌ Введите email и ID заявки для удаления")
+        if view_email and validate_email(view_email):
+            show_student_requests(view_email)
+        elif view_email:
+            st.warning("⚠️ Введите корректный email адрес")
+        else:
+            st.info("👆 Введите ваш email, чтобы увидеть свои заявки")
 
     st.markdown("---")
     st.markdown("### 🛠 Техническая поддержка")
