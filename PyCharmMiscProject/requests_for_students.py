@@ -342,11 +342,18 @@ def main():
                     "status": "Статус"
                 })
                 
+                # Убеждаемся, что поле completed_confirmed существует
+                if 'completed_confirmed' not in display_df.columns:
+                    display_df['completed_confirmed'] = False
+                
                 # Форматируем статус с учетом подтверждения
                 def format_status(row):
-                    if row['status'] == "Выполнена" and row.get('completed_confirmed', False):
-                        return "✅ Выполнена (подтверждено)"
-                    return row['status']
+                    try:
+                        if row['Статус'] == "Выполнена" and row.get('completed_confirmed', False):
+                            return "✅ Выполнена (подтверждено)"
+                        return row['Статус']
+                    except:
+                        return row['Статус']
                 
                 display_df["Статус"] = display_df.apply(format_status, axis=1)
                 
@@ -397,12 +404,13 @@ def main():
                 
                 # Сохраняем состояние чекбоксов
                 for i in range(len(edited_df)):
-                    st.session_state[checkbox_key][i] = edited_df.loc[i, "Выбрать"]
+                    if i < len(edited_df):
+                        st.session_state[checkbox_key][i] = edited_df.loc[i, "Выбрать"]
                 
                 # Получаем выбранные ID
                 selected_ids = []
                 for i in range(len(edited_df)):
-                    if edited_df.loc[i, "Выбрать"]:
+                    if i < len(edited_df) and edited_df.loc[i, "Выбрать"]:
                         selected_ids.append(edit_df.loc[i, "ID"])
                 
                 if selected_ids:
@@ -432,7 +440,6 @@ def main():
                                 success, message = delete_request(id, view_email)
                                 if success:
                                     success_count += 1
-                                    # Уведомляем сотрудников
                                     notification_body = f"Заявка №{id} была удалена студентом {view_email}"
                                     for worker_email in WORKER_EMAILS:
                                         send_email(worker_email, f"🗑️ Заявка №{id} удалена студентом", notification_body)
@@ -450,14 +457,6 @@ def main():
                 st.markdown("---")
                 st.subheader("✅ Подтверждение выполнения")
                 
-                # Проверяем, есть ли выбранные заявки со статусом "Выполнена"
-                can_confirm = False
-                for id in selected_ids:
-                    for _, row in edit_df.iterrows():
-                        if row['ID'] == id and row['Статус'] == "Выполнена":
-                            can_confirm = True
-                            break
-                
                 if st.button("✅ Подтвердить выполнение выбранных", use_container_width=True, key="confirm_selected_student"):
                     if selected_ids:
                         success_count = 0
@@ -474,9 +473,6 @@ def main():
                             st.error("❌ Ошибка при подтверждении. Убедитесь, что выбраны заявки со статусом 'Выполнена'.")
                     else:
                         st.warning("⚠️ Выберите заявки для подтверждения")
-                
-                if not can_confirm and selected_ids:
-                    st.warning("⚠️ Для подтверждения выберите заявки со статусом 'Выполнена'")
                 
             else:
                 st.warning("Заявки не найдены")
